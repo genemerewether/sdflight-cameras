@@ -8,9 +8,16 @@ SLIB = $(foreach name,$(SRC),lib$(name).a)
 
 CXX = /usr/bin/g++
 AR = /usr/bin/ar
-CXXFLAGS = -I. -g
+CXXFLAGS = -I. -g \
+	-Wall -Wextra \
+	-fno-builtin -fno-asm \
+        -fstrength-reduce \
+	-Wno-unused-parameter \
+	-Wno-long-long \
+	-fcheck-new \
+	-Wnon-virtual-dtor
 
-LIBS = -lpthread -lcamera -lcamparams
+LIBS = -lpthread -lcamera -lcamparams #-ldl -lm -lrt -lutil
 
 uname_p = $(shell uname -p)
 ifneq (,$(filter $(uname_p),x86_64 x86))
