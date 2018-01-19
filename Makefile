@@ -42,7 +42,13 @@ main: $(SLIB) main.cpp
 lib%.a: %.o $(DEPS)
 	$(AR) $(AR_FLAGS) $@ $<
 
-.PHONY: all clean print
+.PHONY: all clean print load
+
+load: all
+	$(foreach file,$(BIN),adb push $(file) /home/linaro/camtest/$(file))
+
+test: load
+	$(foreach file,$(BIN),adb shell /home/linaro/camtest/$(file))
 
 print:
 	@echo "OBJ: " $(OBJ)
