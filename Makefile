@@ -6,6 +6,8 @@ DEPS = $(foreach name,$(SRC),$(name).hpp) Debug.hpp
 OBJ = $(foreach name,$(sort $(SRC) $(BIN)),$(name).o)
 SLIB = $(foreach name,$(SRC),lib$(name).a)
 
+PUSHDIR = /home/linaro/camtest/
+
 CXX = /usr/bin/g++
 AR = /usr/bin/ar
 CXXFLAGS = -I. -g \
@@ -19,19 +21,28 @@ CXXFLAGS = -I. -g \
 
 LIBS = -lpthread -lcamera -lcamparams #-ldl -lm -lrt -lutil
 
+all: $(BIN)
+
 uname_p = $(shell uname -p)
 ifneq (,$(filter $(uname_p),x86_64 x86))
 	CXX = $(HEXAGON_SDK_ROOT)/gcc-linaro-4.9-2014.11-x86_64_arm-linux-gnueabihf_linux/bin/arm-linux-gnueabihf-g++
 	AR = $(HEXAGON_SDK_ROOT)/gcc-linaro-4.9-2014.11-x86_64_arm-linux-gnueabihf_linux/bin/arm-linux-gnueabihf-ar
 	CXXFLAGS := $(CXXFLAGS) -I$(HEXAGON_SDK_ROOT)/incs
 	LIBS := -L $(HEXAGON_ARM_SYSROOT)/usr/lib/ $(LIBS) $(HEXAGON_ARM_SYSROOT)/lib/libstdc++.so.6
+
+load: all
+	$(foreach file,$(BIN),adb push $(file) $(PUSHDIR)$(file))
+
+test: load
+	$(foreach file,$(BIN),adb shell $(PUSHDIR)$(file))
+else
+test: all
+	$(foreach file,$(BIN),./$(file))
 endif
 
 AR_FLAGS=rcs
 
 EXTRA=
-
-all: $(BIN)
 
 main: $(SLIB) main.cpp
 	$(CXX) $(CXXFLAGS) $(EXTRA) -o $@ -Wl,--start-group $^ $(LIBS) -Wl,--end-group
@@ -43,12 +54,6 @@ lib%.a: %.o $(DEPS)
 	$(AR) $(AR_FLAGS) $@ $<
 
 .PHONY: all clean print load
-
-load: all
-	$(foreach file,$(BIN),adb push $(file) /home/linaro/camtest/$(file))
-
-test: load
-	$(foreach file,$(BIN),adb shell /home/linaro/camtest/$(file))
 
 print:
 	@echo "OBJ: " $(OBJ)
