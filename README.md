@@ -1,17 +1,4 @@
-## Makefile
-
-### Environment (cross-compiling)
-- Make sure `HEXAGON_SDK_ROOT` and `HEXAGON_ARM_SYSROOT` are defined
-- `make`
-
-### Environment (native)
-- no special setup needed
-```
-adb push ../sdflight-cameras /home/linaro/sdflight-cameras
-adb shell
-cd /home/linaro/sdflight-cameras
-make
-```
+This repository is for debugging simplified use cases for Snapdragon Flight Linux Camera API
 
 ## Use-cases that are being debugged
 
@@ -38,3 +25,18 @@ make
 ### Code design / classes
 - One class for 4K camera, one for optic flow camera
 - Both declared at global scope (doesn't seem to matter)
+
+## Makefile
+
+### Environment (cross-compiling)
+- Make sure `HEXAGON_SDK_ROOT` and `HEXAGON_ARM_SYSROOT` are defined
+- Run `make`
+
+### Environment (native)
+- no special setup needed
+```
+adb push ../sdflight-cameras /home/linaro/sdflight-cameras
+adb shell
+cd /home/linaro/sdflight-cameras
+make
+```
