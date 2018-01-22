@@ -1,6 +1,6 @@
-SRC = Hires #Optic
+SRC = Hires Optic
 
-BIN = main # main_nothread main_thread main_hires main_optic
+BIN = main # main_thread
 
 DEPS = $(foreach name,$(SRC),$(name).hpp) Debug.hpp
 OBJ = $(foreach name,$(sort $(SRC) $(BIN)),$(name).o)
@@ -8,8 +8,6 @@ SLIB = $(foreach name,$(SRC),lib$(name).a)
 
 PUSHDIR = /home/linaro/camtest/
 
-CXX = /usr/bin/g++
-AR = /usr/bin/ar
 CXXFLAGS = -I. -g \
 	-Wall -Wextra \
 	-fno-builtin -fno-asm \
@@ -23,8 +21,10 @@ LIBS = -lpthread -lcamera -lcamparams #-ldl -lm -lrt -lutil
 
 all: $(BIN)
 
-uname_p = $(shell uname -p)
-ifneq (,$(filter $(uname_p),x86_64 x86))
+# cross-compiling? or native?
+uname_m = $(shell uname -m)
+ifneq (,$(filter $(uname_m),x86_64 x86)) # cross-compiling
+
 	CXX = $(HEXAGON_SDK_ROOT)/gcc-linaro-4.9-2014.11-x86_64_arm-linux-gnueabihf_linux/bin/arm-linux-gnueabihf-g++
 	AR = $(HEXAGON_SDK_ROOT)/gcc-linaro-4.9-2014.11-x86_64_arm-linux-gnueabihf_linux/bin/arm-linux-gnueabihf-ar
 	CXXFLAGS := $(CXXFLAGS) -I$(HEXAGON_SDK_ROOT)/incs
@@ -35,17 +35,22 @@ load: all
 
 test: load
 	$(foreach file,$(BIN),adb shell $(PUSHDIR)$(file))
-else
+
+else # native
+
+CXX = /usr/bin/g++
+AR = /usr/bin/ar
 test: all
 	$(foreach file,$(BIN),./$(file))
-endif
+
+endif # cross-compiling? or native?
 
 AR_FLAGS=rcs
 
 EXTRA=
 
-main: $(SLIB) main.cpp
-	$(CXX) $(CXXFLAGS) $(EXTRA) -o $@ -Wl,--start-group $^ $(LIBS) -Wl,--end-group
+mai%: mai%.cpp $(SLIB)
+	$(CXX) $(CXXFLAGS) $(EXTRA) $< -o $@ -Wl,--start-group $(filter-out $<,$^) $(LIBS) -Wl,--end-group
 
 %.o: %.cpp $(DEPS)
 	$(CXX) -c -o $@ $< $(CXXFLAGS)
@@ -53,7 +58,7 @@ main: $(SLIB) main.cpp
 lib%.a: %.o $(DEPS)
 	$(AR) $(AR_FLAGS) $@ $<
 
-.PHONY: all clean print load
+.PHONY: all clean print load test
 
 print:
 	@echo "OBJ: " $(OBJ)

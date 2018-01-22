@@ -14,15 +14,11 @@ public:
 
   ~Hires();
 
-  int activate();
-
-  void deactivate();
-
   int takePicture();
 
   int startRecording();
 
-  int stopRecording();
+  void stopRecording();
 
 private:
   // Interface functions
@@ -38,12 +34,19 @@ private:
 
   virtual void onMetadataFrame(camera::ICameraFrame *frame);
 
+  // Private functions
+  int activate();
+
+  void deactivate();
+
   // Member variables
   camera::ICameraDevice* m_cameraPtr;
 
   camera::CameraParams m_params;
 
   bool m_frameReady;
+
+  bool m_recording;
 
   pthread_mutex_t m_cameraFrameLock;
 

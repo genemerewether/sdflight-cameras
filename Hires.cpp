@@ -1,14 +1,22 @@
 #include "Hires.hpp"
 #include <assert.h>
 #include <pthread.h>
+#include <sys/time.h>
+#include <time.h>
 
 #define HIRES_CAM_TYPE 0
 
 Hires::Hires() :
   m_cameraPtr(NULL),
   m_params(),
-  m_frameReady(false)
+  m_frameReady(false),
+  m_recording(false)
 {
+  struct timeval tv;
+  gettimeofday(&tv,NULL);
+  DEBUG_PRINT("\nHires constructor at time %f\n",
+              tv.tv_sec + tv.tv_usec / 1000000.0);
+
   int stat = 0;
   int cameraID = 0;
   bool found = false;
@@ -38,6 +46,11 @@ Hires::Hires() :
 }
 
 Hires::~Hires() {
+  struct timeval tv;
+  gettimeofday(&tv,NULL);
+  DEBUG_PRINT("\nHires destructor at time %f\n",
+              tv.tv_sec + tv.tv_usec / 1000000.0);
+
   if(m_cameraPtr != NULL) {
     camera::ICameraDevice::deleteInstance(&m_cameraPtr);
     m_cameraPtr = NULL;
@@ -48,20 +61,17 @@ Hires::~Hires() {
   assert(0 == pthread_cond_destroy(&m_cameraFrameReady));
 }
 
-int Hires::activate() {
-  assert(m_cameraPtr != NULL);
-  m_cameraPtr->addListener(this);
-  return m_cameraPtr->startPreview();
-}
-
-void Hires::deactivate() {
-  assert(m_cameraPtr != NULL);
-  m_cameraPtr->removeListener(this);
-  m_cameraPtr->stopPreview();
-  return;
-}
-
 int Hires::takePicture() {
+  struct timeval tv;
+  gettimeofday(&tv,NULL);
+  if (m_recording) {
+    DEBUG_PRINT("\nHires takePicture called while recording at time %f\n",
+                tv.tv_sec + tv.tv_usec / 1000000.0);
+    return -1;
+  }
+  DEBUG_PRINT("\nHires takePicture called at time %f\n",
+              tv.tv_sec + tv.tv_usec / 1000000.0);
+
   int stat = this->activate();
   if (stat) {
     return stat;
@@ -85,23 +95,49 @@ int Hires::takePicture() {
 }
 
 int Hires::startRecording() {
-  return 0;
+  int stat = this->activate();
+  if (stat) {
+    return stat;
+  }
+  return m_cameraPtr->startRecording();
+}
+
+void Hires::stopRecording() {
+  m_cameraPtr->stopRecording();
+  this->deactivate();
 }
 
 // Interface functions
 void Hires::onError() {
+  struct timeval tv;
+  gettimeofday(&tv,NULL);
+  DEBUG_PRINT("\nHires Error callback at time %f\n",
+              tv.tv_sec + tv.tv_usec / 1000000.0);
 }
 
 void Hires::onControl(const camera::ControlEvent& control) {
 }
 
 void Hires::onPreviewFrame(camera::ICameraFrame *frame) {
+  struct timeval tv;
+  gettimeofday(&tv,NULL);
+  DEBUG_PRINT("\nHires Preview callback at time %f; size %u\n",
+              tv.tv_sec + tv.tv_usec / 1000000.0, frame->size);
 }
 
 void Hires::onVideoFrame(camera::ICameraFrame *frame) {
+  struct timeval tv;
+  gettimeofday(&tv,NULL);
+  DEBUG_PRINT("\nHires Video callback at time %f; size %u\n",
+              tv.tv_sec + tv.tv_usec / 1000000.0, frame->size);
 }
 
 void Hires::onPictureFrame(camera::ICameraFrame *frame) {
+  struct timeval tv;
+  gettimeofday(&tv,NULL);
+  DEBUG_PRINT("\nHires Picture callback at time %f; size %u\n",
+              tv.tv_sec + tv.tv_usec / 1000000.0, frame->size);
+
   assert(0 == pthread_mutex_lock(&m_cameraFrameLock));
 
   m_frameReady = true;
@@ -112,4 +148,22 @@ void Hires::onPictureFrame(camera::ICameraFrame *frame) {
 }
 
 void Hires::onMetadataFrame(camera::ICameraFrame *frame) {
+  struct timeval tv;
+  gettimeofday(&tv,NULL);
+  DEBUG_PRINT("\nHires Metadata callback at time %f; size %u\n",
+              tv.tv_sec + tv.tv_usec / 1000000.0, frame->size);
+}
+
+// Private functions
+int Hires::activate() {
+  assert(m_cameraPtr != NULL);
+  m_cameraPtr->addListener(this);
+  return m_cameraPtr->startPreview();
+}
+
+void Hires::deactivate() {
+  assert(m_cameraPtr != NULL);
+  m_cameraPtr->removeListener(this);
+  m_cameraPtr->stopPreview();
+  return;
 }
