@@ -1,6 +1,6 @@
 SRC = Hires Optic
 
-BIN = main # main_thread
+BIN = main main_simul_gbl main_simul main_optic main_hires # main_thread
 
 DEPS = $(foreach name,$(SRC),$(name).hpp) Debug.hpp
 OBJ = $(foreach name,$(sort $(SRC) $(BIN)),$(name).o)
@@ -17,7 +17,7 @@ CXXFLAGS = -I. -g \
 	-fcheck-new \
 	-Wnon-virtual-dtor
 
-LIBS = -lpthread -lcamera -lcamparams #-ldl -lm -lrt -lutil
+LIBS = -lpthread -lcamera # missing symlink -lcamparams # not needed -ldl -lm -lrt -lutil
 
 all: $(BIN)
 
@@ -28,20 +28,32 @@ ifneq (,$(filter $(uname_m),x86_64 x86)) # cross-compiling
 	CXX = $(HEXAGON_SDK_ROOT)/gcc-linaro-4.9-2014.11-x86_64_arm-linux-gnueabihf_linux/bin/arm-linux-gnueabihf-g++
 	AR = $(HEXAGON_SDK_ROOT)/gcc-linaro-4.9-2014.11-x86_64_arm-linux-gnueabihf_linux/bin/arm-linux-gnueabihf-ar
 	CXXFLAGS := $(CXXFLAGS) -I$(HEXAGON_SDK_ROOT)/incs
-	LIBS := -L $(HEXAGON_ARM_SYSROOT)/usr/lib/ $(LIBS) $(HEXAGON_ARM_SYSROOT)/lib/libstdc++.so.6
+	LIBS := -L $(HEXAGON_ARM_SYSROOT)/usr/lib/ $(HEXAGON_ARM_SYSROOT)/usr/lib/libcamparams.so.0 $(LIBS) $(HEXAGON_ARM_SYSROOT)/lib/libstdc++.so.6
+
+test_mai%: mai%
+	adb push $< $(PUSHDIR)$<
+	adb shell $(PUSHDIR)$<
+
+test_multiproc: main_optic main_hires
+	$(foreach file,$^,adb push $(file) $(PUSHDIR)$(file);)
+	adb shell '($(PUSHDIR)main_optic &); sleep 1; $(PUSHDIR)main_hires; sleep 10'
 
 load: all
-	$(foreach file,$(BIN),adb push $(file) $(PUSHDIR)$(file))
+	$(foreach file,$(BIN),adb push $(file) $(PUSHDIR)$(file);)
 
 test: load
-	$(foreach file,$(BIN),adb shell $(PUSHDIR)$(file))
+	$(foreach file,$(BIN),adb shell $(PUSHDIR)$(file);)
 
 else # native
 
 CXX = /usr/bin/g++
 AR = /usr/bin/ar
+LIBS := /usr/lib/libcamparams.so.0 $(LIBS) # missing symlink
 test: all
 	$(foreach file,$(BIN),./$(file))
+
+test_mai%: mai%
+	$<
 
 endif # cross-compiling? or native?
 

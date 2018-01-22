@@ -4,6 +4,8 @@
 #include <sys/time.h>
 #include <time.h>
 
+#define HIRES_PCOLOR KBLU
+
 #define HIRES_CAM_TYPE 0
 
 Hires::Hires() :
@@ -14,7 +16,7 @@ Hires::Hires() :
 {
   struct timeval tv;
   gettimeofday(&tv,NULL);
-  DEBUG_PRINT("\nHires constructor at time %f\n",
+  DEBUG_PRINT(HIRES_PCOLOR "\nHires constructor at time %f\n" KNRM,
               tv.tv_sec + tv.tv_usec / 1000000.0);
 
   int stat = 0;
@@ -48,7 +50,7 @@ Hires::Hires() :
 Hires::~Hires() {
   struct timeval tv;
   gettimeofday(&tv,NULL);
-  DEBUG_PRINT("\nHires destructor at time %f\n",
+  DEBUG_PRINT(HIRES_PCOLOR "\nHires destructor at time %f\n" KNRM,
               tv.tv_sec + tv.tv_usec / 1000000.0);
 
   if(m_cameraPtr != NULL) {
@@ -65,11 +67,11 @@ int Hires::takePicture() {
   struct timeval tv;
   gettimeofday(&tv,NULL);
   if (m_recording) {
-    DEBUG_PRINT("\nHires takePicture called while recording at time %f\n",
+    DEBUG_PRINT(HIRES_PCOLOR "\nHires takePicture called while recording at time %f\n" KNRM,
                 tv.tv_sec + tv.tv_usec / 1000000.0);
     return -1;
   }
-  DEBUG_PRINT("\nHires takePicture called at time %f\n",
+  DEBUG_PRINT(HIRES_PCOLOR "\nHires takePicture called at time %f\n" KNRM,
               tv.tv_sec + tv.tv_usec / 1000000.0);
 
   int stat = this->activate();
@@ -99,11 +101,13 @@ int Hires::startRecording() {
   if (stat) {
     return stat;
   }
+  m_recording = true;
   return m_cameraPtr->startRecording();
 }
 
 void Hires::stopRecording() {
   m_cameraPtr->stopRecording();
+  m_recording = false;
   this->deactivate();
 }
 
@@ -111,7 +115,7 @@ void Hires::stopRecording() {
 void Hires::onError() {
   struct timeval tv;
   gettimeofday(&tv,NULL);
-  DEBUG_PRINT("\nHires Error callback at time %f\n",
+  DEBUG_PRINT(HIRES_PCOLOR "\nHires Error callback at time %f\n" KNRM,
               tv.tv_sec + tv.tv_usec / 1000000.0);
 }
 
@@ -121,21 +125,21 @@ void Hires::onControl(const camera::ControlEvent& control) {
 void Hires::onPreviewFrame(camera::ICameraFrame *frame) {
   struct timeval tv;
   gettimeofday(&tv,NULL);
-  DEBUG_PRINT("\nHires Preview callback at time %f; size %u\n",
+  DEBUG_PRINT(HIRES_PCOLOR "\nHires Preview callback at time %f; size %u\n" KNRM,
               tv.tv_sec + tv.tv_usec / 1000000.0, frame->size);
 }
 
 void Hires::onVideoFrame(camera::ICameraFrame *frame) {
   struct timeval tv;
   gettimeofday(&tv,NULL);
-  DEBUG_PRINT("\nHires Video callback at time %f; size %u\n",
+  DEBUG_PRINT(HIRES_PCOLOR "\nHires Video callback at time %f; size %u\n" KNRM,
               tv.tv_sec + tv.tv_usec / 1000000.0, frame->size);
 }
 
 void Hires::onPictureFrame(camera::ICameraFrame *frame) {
   struct timeval tv;
   gettimeofday(&tv,NULL);
-  DEBUG_PRINT("\nHires Picture callback at time %f; size %u\n",
+  DEBUG_PRINT(HIRES_PCOLOR "\nHires Picture callback at time %f; size %u\n" KNRM,
               tv.tv_sec + tv.tv_usec / 1000000.0, frame->size);
 
   assert(0 == pthread_mutex_lock(&m_cameraFrameLock));
@@ -150,7 +154,7 @@ void Hires::onPictureFrame(camera::ICameraFrame *frame) {
 void Hires::onMetadataFrame(camera::ICameraFrame *frame) {
   struct timeval tv;
   gettimeofday(&tv,NULL);
-  DEBUG_PRINT("\nHires Metadata callback at time %f; size %u\n",
+  DEBUG_PRINT(HIRES_PCOLOR "\nHires Metadata callback at time %f; size %u\n" KNRM,
               tv.tv_sec + tv.tv_usec / 1000000.0, frame->size);
 }
 

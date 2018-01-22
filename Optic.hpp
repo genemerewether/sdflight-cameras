@@ -10,7 +10,7 @@
 class Optic : private camera::ICameraListener
 {
 public:
-  Optic();
+  Optic(bool print = true);
 
   ~Optic();
 
@@ -33,6 +33,8 @@ private:
   virtual void onMetadataFrame(camera::ICameraFrame *frame);
 
   // Member variables
+  bool m_print;
+
   camera::ICameraDevice* m_cameraPtr;
 
   camera::CameraParams m_params;

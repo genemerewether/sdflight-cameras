@@ -20,6 +20,6 @@ int main(int argc, char *argv[]) {
   assert(0 == optic.activate());
   usleep(1000 * 500);
   optic.deactivate();
-  sleep(1);
+
   return 0;
 }

@@ -4,15 +4,18 @@
 #include <sys/time.h>
 #include <time.h>
 
+#define OPTIC_PCOLOR KYEL
+
 #define OPTIC_CAM_TYPE 1
 
-Optic::Optic() :
+Optic::Optic(bool print) :
+  m_print(print),
   m_cameraPtr(NULL),
   m_params()
 {
   struct timeval tv;
   gettimeofday(&tv,NULL);
-  DEBUG_PRINT("\nOptic constructor at time %f\n",
+  DEBUG_PRINT(OPTIC_PCOLOR "\nOptic constructor at time %f\n" KNRM,
               tv.tv_sec + tv.tv_usec / 1000000.0);
 
   int stat = 0;
@@ -44,7 +47,7 @@ Optic::Optic() :
 Optic::~Optic() {
   struct timeval tv;
   gettimeofday(&tv,NULL);
-  DEBUG_PRINT("\nOptic destructor at time %f\n",
+  DEBUG_PRINT(OPTIC_PCOLOR "\nOptic destructor at time %f\n" KNRM,
               tv.tv_sec + tv.tv_usec / 1000000.0);
 
   if(m_cameraPtr != NULL) {
@@ -59,7 +62,7 @@ Optic::~Optic() {
 void Optic::onError() {
   struct timeval tv;
   gettimeofday(&tv,NULL);
-  DEBUG_PRINT("\nOptic Error callback at time %f\n",
+  DEBUG_PRINT(OPTIC_PCOLOR "\nOptic Error callback at time %f\n" KNRM,
               tv.tv_sec + tv.tv_usec / 1000000.0);
 }
 
@@ -67,30 +70,32 @@ void Optic::onControl(const camera::ControlEvent& control) {
 }
 
 void Optic::onPreviewFrame(camera::ICameraFrame *frame) {
-  struct timeval tv;
-  gettimeofday(&tv,NULL);
-  DEBUG_PRINT("\nOptic Preview callback at time %f; size %u\n",
-              tv.tv_sec + tv.tv_usec / 1000000.0, frame->size);
+  if (m_print) {
+    struct timeval tv;
+    gettimeofday(&tv,NULL);
+    DEBUG_PRINT(OPTIC_PCOLOR "\nOptic Preview callback at time %f; size %u\n" KNRM,
+                tv.tv_sec + tv.tv_usec / 1000000.0, frame->size);
+  }
 }
 
 void Optic::onVideoFrame(camera::ICameraFrame *frame) {
   struct timeval tv;
   gettimeofday(&tv,NULL);
-  DEBUG_PRINT("\nOptic Video callback at time %f; size %u\n",
+  DEBUG_PRINT(OPTIC_PCOLOR "\nOptic Video callback at time %f; size %u\n" KNRM,
               tv.tv_sec + tv.tv_usec / 1000000.0, frame->size);
 }
 
 void Optic::onPictureFrame(camera::ICameraFrame *frame) {
   struct timeval tv;
   gettimeofday(&tv,NULL);
-  DEBUG_PRINT("\nOptic Picture callback at time %f; size %u\n",
+  DEBUG_PRINT(OPTIC_PCOLOR "\nOptic Picture callback at time %f; size %u\n" KNRM,
               tv.tv_sec + tv.tv_usec / 1000000.0, frame->size);
 }
 
 void Optic::onMetadataFrame(camera::ICameraFrame *frame) {
   struct timeval tv;
   gettimeofday(&tv,NULL);
-  DEBUG_PRINT("\nOptic Metadata callback at time %f; size %u\n",
+  DEBUG_PRINT(OPTIC_PCOLOR "\nOptic Metadata callback at time %f; size %u\n" KNRM,
               tv.tv_sec + tv.tv_usec / 1000000.0, frame->size);
 }
 
