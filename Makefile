@@ -1,6 +1,6 @@
 SRC = Hires Optic
 
-BIN = main main_simul_gbl main_simul main_optic main_hires # main_thread
+BIN = main main_simul_gbl main_simul main_optic main_hires main_loop # main_thread
 
 DEPS = $(foreach name,$(SRC),$(name).hpp) Debug.hpp
 OBJ = $(foreach name,$(sort $(SRC) $(BIN)),$(name).o)
@@ -37,6 +37,10 @@ test_mai%: mai%
 test_multiproc: main_optic main_hires
 	$(foreach file,$^,adb push $(file) $(PUSHDIR)$(file);)
 	adb shell '($(PUSHDIR)main_optic &); sleep 1; $(PUSHDIR)main_hires; sleep 10'
+
+test_loop: main_loop
+	adb push main_loop $(PUSHDIR)main_loop
+	adb shell 'taskset -c 2 $(PUSHDIR)main_loop'
 
 load: all
 	$(foreach file,$(BIN),adb push $(file) $(PUSHDIR)$(file);)
