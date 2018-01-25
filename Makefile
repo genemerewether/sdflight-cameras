@@ -40,7 +40,15 @@ test_multiproc: main_optic main_hires
 
 test_loop: main_loop
 	adb push main_loop $(PUSHDIR)main_loop
-	adb shell 'taskset -c 2 $(PUSHDIR)main_loop'
+	adb shell 'screen -S TESTMAINLOOP taskset -c 2 $(PUSHDIR)main_loop'
+	adb shell screen -dD
+
+test_loop_multiproc: main_loop_optic main_loop_hires
+	$(foreach file,$^,adb push $(file) $(PUSHDIR)$(file);)
+	adb shell 'screen -S TESTMAINLOOPOPTIC taskset -c 2 $(PUSHDIR)main_loop_optic'
+	adb shell screen -dD
+	adb shell 'screen -S TESTMAINLOOPHIRES taskset -c 2 $(PUSHDIR)main_loop_hires'
+	adb shell screen -dD
 
 load: all
 	$(foreach file,$(BIN),adb push $(file) $(PUSHDIR)$(file);)
