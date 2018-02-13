@@ -10,13 +10,32 @@
 class Hires : private camera::ICameraListener
 {
 public:
-  Hires();
+  typedef enum {
+    HIRES_IMG_13MP_RAW,
+    HIRES_IMG_13MP,
+    HIRES_IMG_13MP_HDR,
+    HIRES_IMG_2MP,
+    HIRES_IMG_2MP_HDR,
+    HIRES_IMG_QVGA,
+    HIRES_IMG_QVGA_HDR,
+    HIRES_IMAGE_MODE_MAX
+  } HiresImageMode;
+
+  typedef enum {
+    HIRES_VID_4K,
+    HIRES_VID_4K_HDR,
+    HIRES_VID_1080P,
+    HIRES_VID_1080P_HDR,
+    HIRES_VIDEO_MODE_MAX
+  } HiresVideoMode;
+
+  Hires(bool save = false);
 
   ~Hires();
 
-  int takePicture();
+  int takePicture(HiresImageMode mode = Hires::HIRES_IMG_13MP);
 
-  int startRecording();
+  int startRecording(HiresVideoMode mode = Hires::HIRES_VID_4K);
 
   void stopRecording();
 
@@ -47,8 +66,15 @@ private:
   bool m_frameReady;
 
   bool m_recording;
+  
+  bool m_save;
+
+  HiresImageMode m_imageMode;
+
+  HiresVideoMode m_videoMode;
 
   pthread_mutex_t m_cameraFrameLock;
 
   pthread_cond_t m_cameraFrameReady;
+
 }; // class Hires

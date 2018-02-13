@@ -3,16 +3,23 @@
 #include <pthread.h>
 #include <sys/time.h>
 #include <time.h>
+#include <unistd.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
 
 #define HIRES_PCOLOR KBLU
 
 #define HIRES_CAM_TYPE 0
 
-Hires::Hires() :
+Hires::Hires(bool save) :
   m_cameraPtr(NULL),
   m_params(),
   m_frameReady(false),
-  m_recording(false)
+  m_recording(false),
+  m_save(save),
+  m_imageMode(HIRES_IMAGE_MODE_MAX),
+  m_videoMode(HIRES_VIDEO_MODE_MAX)
 {
   struct timeval tv;
   gettimeofday(&tv,NULL);
@@ -42,6 +49,9 @@ Hires::Hires() :
   stat = camera::ICameraDevice::createInstance(cameraID, &m_cameraPtr);
   assert(stat == 0);
 
+  stat = m_params.init(m_cameraPtr);
+  assert(stat == 0);
+
   assert(0 == pthread_mutex_init(&m_cameraFrameLock, 0));
 
   assert(0 == pthread_cond_init(&m_cameraFrameReady, 0));
@@ -63,7 +73,8 @@ Hires::~Hires() {
   assert(0 == pthread_cond_destroy(&m_cameraFrameReady));
 }
 
-int Hires::takePicture() {
+int Hires::takePicture(HiresImageMode mode) {
+  int stat = -1;
   struct timeval tv;
   gettimeofday(&tv,NULL);
   if (m_recording) {
@@ -71,10 +82,61 @@ int Hires::takePicture() {
                 tv.tv_sec + tv.tv_usec / 1000000.0);
     return -1;
   }
-  DEBUG_PRINT(HIRES_PCOLOR "\nHires takePicture called at time %f\n" KNRM,
-              tv.tv_sec + tv.tv_usec / 1000000.0);
+  DEBUG_PRINT(HIRES_PCOLOR "\nHires takePicture called at time %f, mode %d\n" KNRM,
+              tv.tv_sec + tv.tv_usec / 1000000.0, mode);
 
-  int stat = this->activate();
+  m_imageMode = mode;
+
+  if ((mode == HIRES_IMG_13MP_HDR) ||
+      (mode == HIRES_IMG_2MP_HDR) ||
+      (mode == HIRES_IMG_QVGA_HDR)) {
+    m_params.set("scene-mode", "hdr");
+    m_params.set("hdr-need-1x", "true");
+    //m_params.set("zsl", "on");
+  }
+
+  if (mode == HIRES_IMG_13MP_RAW) {
+    m_params.set("raw-size", "4208x3120");
+    m_params.set("preview-format", "bayer-rggb");
+    m_params.set("picture-format", "bayer-mipi-10bggr");
+  }
+  else {
+    m_params.set("preview-format", "yuv420sp");
+    m_params.set("picture-format", "yuv420sp");
+  }
+
+  camera::ImageSize imageSize;
+  switch (mode) {
+    case HIRES_IMG_13MP_RAW:
+    case HIRES_IMG_13MP:
+    case HIRES_IMG_13MP_HDR:
+      imageSize = camera::ImageSize(4208, 3120);
+      break;
+    case HIRES_IMG_2MP:
+    case HIRES_IMG_2MP_HDR:
+      imageSize = camera::ImageSize(1920, 1080);
+      break;
+    case HIRES_IMG_QVGA:
+    case HIRES_IMG_QVGA_HDR:
+      imageSize = camera::ImageSize(320, 240);
+      break;
+    default:
+      DEBUG_PRINT("\nHires takePicture called with invalid mode\n");
+      assert(0);
+  }
+
+  m_params.setPictureSize(imageSize);
+  m_params.setPreviewSize(imageSize);
+  stat = m_params.commit();
+  assert(stat == 0);
+
+  const camera::ImageSize getSize = m_params.getPictureSize();
+  DEBUG_PRINT(HIRES_PCOLOR "\nHires has raw size %s; width %d; height %d\n",
+              m_params.get("raw-size").c_str(),
+              getSize.width,
+              getSize.height);
+
+  stat = this->activate();
   if (stat) {
     return stat;
   }
@@ -96,8 +158,61 @@ int Hires::takePicture() {
   return 0;
 }
 
-int Hires::startRecording() {
-  int stat = this->activate();
+int Hires::startRecording(HiresVideoMode mode) {
+  int stat = -1;
+  struct timeval tv;
+  gettimeofday(&tv,NULL);
+  DEBUG_PRINT(HIRES_PCOLOR "\nHires startRecording called at time %f, mode %d\n" KNRM,
+              tv.tv_sec + tv.tv_usec / 1000000.0, mode);
+  switch (mode) {
+    case HIRES_VID_4K:
+      {
+        const camera::ImageSize imageSize = camera::ImageSize(4208, 3120);
+        m_params.setVideoSize(imageSize);
+        m_params.setPreviewSize(imageSize);
+      }
+      m_params.set("preview-format", "yuv420sp");
+      break;
+    case HIRES_VID_4K_HDR:
+      {
+        const camera::ImageSize imageSize = camera::ImageSize(4208, 3120);
+        m_params.setVideoSize(imageSize);
+        m_params.setPreviewSize(imageSize);
+      }
+      m_params.set("preview-format", "bayer-rggb");
+      m_params.set("picture-format", "bayer-mipi-10bggr");
+      m_params.set("scene-mode", "hdr");
+      m_params.set("hdr-need-1x", "true");
+      break;
+    case HIRES_VID_1080P:
+      {
+        const camera::ImageSize imageSize = camera::ImageSize(1920, 1080);
+        m_params.setVideoSize(imageSize);
+        m_params.setPreviewSize(imageSize);
+      }
+      m_params.set("preview-format", "bayer-rggb");
+      m_params.set("picture-format", "bayer-mipi-10bggr");
+      break;
+    case HIRES_VID_1080P_HDR:
+      {
+        const camera::ImageSize imageSize = camera::ImageSize(1920, 1080);
+        m_params.setVideoSize(imageSize);
+        m_params.setPreviewSize(imageSize);
+      }
+      m_params.set("preview-format", "bayer-rggb");
+      m_params.set("picture-format", "bayer-mipi-10bggr");
+      m_params.set("scene-mode", "hdr");
+      m_params.set("hdr-need-1x", "true");
+      break;
+    default:
+      DEBUG_PRINT("\nHires startRecording called with invalid mode\n");
+      assert(0);
+  }
+
+  stat = m_params.commit();
+  assert(stat == 0);
+
+  stat = this->activate();
   if (stat) {
     return stat;
   }
@@ -141,6 +256,44 @@ void Hires::onPictureFrame(camera::ICameraFrame *frame) {
   gettimeofday(&tv,NULL);
   DEBUG_PRINT(HIRES_PCOLOR "\nHires Picture callback at time %f; size %u\n" KNRM,
               tv.tv_sec + tv.tv_usec / 1000000.0, frame->size);
+
+  if (m_save) {
+    const char* fileName;
+    switch (m_imageMode) {
+      case HIRES_IMG_13MP_RAW:
+        fileName = "HIRES_IMG_13MP_RAW";
+        break;
+      case HIRES_IMG_13MP:
+        fileName = "HIRES_IMG_13MP";
+        break;
+      case HIRES_IMG_13MP_HDR:
+        fileName = "HIRES_IMG_13MP_HDR";
+        break;
+      case HIRES_IMG_2MP:
+        fileName = "HIRES_IMG_2MP";
+        break;
+      case HIRES_IMG_2MP_HDR:
+        fileName = "HIRES_IMG_2MP_HDR";
+        break;
+      case HIRES_IMG_QVGA:
+        fileName = "HIRES_IMG_QVGA";
+        break;
+      case HIRES_IMG_QVGA_HDR:
+        fileName = "HIRES_IMG_QVGA_HDR";
+        break;
+      default:
+        DEBUG_PRINT("\nHires invalid image mode in onPictureFrame\n");
+        fileName = "HIRES_IMG_UNKNOWN";
+    }
+    int fid = open(fileName,
+                   O_CREAT | O_WRONLY | O_TRUNC,
+                   S_IRUSR | S_IWUSR |  S_IRGRP | S_IWGRP);
+    assert(fid != -1);
+
+    write(fid, frame->data, frame->size);
+
+    assert(close(fid) != -1);
+  }
 
   assert(0 == pthread_mutex_lock(&m_cameraFrameLock));
 

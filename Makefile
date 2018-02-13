@@ -1,6 +1,6 @@
 SRC = Hires Optic
 
-BIN = main main_simul_gbl main_simul main_optic main_hires main_loop # main_thread
+BIN = main main_optic main_hires main_loop # main_thread main_simul_gbl main_simul
 
 DEPS = $(foreach name,$(SRC),$(name).hpp) Debug.hpp
 OBJ = $(foreach name,$(sort $(SRC) $(BIN)),$(name).o)
