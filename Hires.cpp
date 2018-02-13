@@ -18,6 +18,8 @@ Hires::Hires(bool save) :
   m_frameReady(false),
   m_recording(false),
   m_save(save),
+  m_framesAcquired(0u),
+  m_frameStopRecording(-1),
   m_imageMode(HIRES_IMAGE_MODE_MAX),
   m_videoMode(HIRES_VIDEO_MODE_MAX)
 {
@@ -71,6 +73,20 @@ Hires::~Hires() {
   assert(0 == pthread_mutex_destroy(&m_cameraFrameLock));
 
   assert(0 == pthread_cond_destroy(&m_cameraFrameReady));
+}
+
+void Hires::recordingAutoStop() {
+  while (1) {
+    if ((m_frameStopRecording >= 0) &&
+        ((int) m_framesAcquired > m_frameStopRecording)) {
+      this->stopRecording();
+      DEBUG_PRINT(HIRES_PCOLOR "\nHires Video auto-deactivating; %u of %d acquired\n" KNRM,
+                  m_framesAcquired,
+                  m_frameStopRecording+1);
+      break;
+    }
+    sleep(1);
+  }
 }
 
 int Hires::takePicture(HiresImageMode mode) {
@@ -141,12 +157,15 @@ int Hires::takePicture(HiresImageMode mode) {
     return stat;
   }
 
-  stat = m_cameraPtr->takePicture();
-  if (stat) {
-    return stat;
-  }
   assert(0 == pthread_mutex_lock(&m_cameraFrameLock));
   m_frameReady = false;
+
+  stat = m_cameraPtr->takePicture();
+  if (stat) {
+    assert(0 == pthread_mutex_unlock(&m_cameraFrameLock));
+    this->deactivate();
+    return stat;
+  }
 
   while (!m_frameReady) {
     assert(0 == pthread_cond_wait(&m_cameraFrameReady, &m_cameraFrameLock));
@@ -158,66 +177,88 @@ int Hires::takePicture(HiresImageMode mode) {
   return 0;
 }
 
-int Hires::startRecording(HiresVideoMode mode) {
+int Hires::startRecording(HiresVideoMode mode,
+                          int frames) {
   int stat = -1;
   struct timeval tv;
   gettimeofday(&tv,NULL);
   DEBUG_PRINT(HIRES_PCOLOR "\nHires startRecording called at time %f, mode %d\n" KNRM,
               tv.tv_sec + tv.tv_usec / 1000000.0, mode);
+
+  if ((mode == HIRES_VID_MAX_HDR) ||
+      (mode == HIRES_VID_1080P_HDR)) {
+    m_params.set("scene-mode", "hdr");
+    m_params.set("hdr-need-1x", "true");
+    //m_params.set("zsl", "on");
+  }
+
+  m_params.set("preview-format", "yuv420sp");
+  m_params.set("picture-format", "yuv420sp");
+
+  camera::ImageSize imageSize;
   switch (mode) {
     case HIRES_VID_4K:
-      {
-        const camera::ImageSize imageSize = camera::ImageSize(4208, 3120);
-        m_params.setVideoSize(imageSize);
-        m_params.setPreviewSize(imageSize);
-      }
-      m_params.set("preview-format", "yuv420sp");
+      imageSize = camera::ImageSize(4208, 3120);
       break;
-    case HIRES_VID_4K_HDR:
-      {
-        const camera::ImageSize imageSize = camera::ImageSize(4208, 3120);
-        m_params.setVideoSize(imageSize);
-        m_params.setPreviewSize(imageSize);
-      }
-      m_params.set("preview-format", "bayer-rggb");
-      m_params.set("picture-format", "bayer-mipi-10bggr");
-      m_params.set("scene-mode", "hdr");
-      m_params.set("hdr-need-1x", "true");
+    case HIRES_VID_MAX_HDR:
+      imageSize = camera::ImageSize(3840, 2160);//(2104, 1560);
       break;
     case HIRES_VID_1080P:
-      {
-        const camera::ImageSize imageSize = camera::ImageSize(1920, 1080);
-        m_params.setVideoSize(imageSize);
-        m_params.setPreviewSize(imageSize);
-      }
-      m_params.set("preview-format", "bayer-rggb");
-      m_params.set("picture-format", "bayer-mipi-10bggr");
-      break;
     case HIRES_VID_1080P_HDR:
-      {
-        const camera::ImageSize imageSize = camera::ImageSize(1920, 1080);
-        m_params.setVideoSize(imageSize);
-        m_params.setPreviewSize(imageSize);
-      }
-      m_params.set("preview-format", "bayer-rggb");
-      m_params.set("picture-format", "bayer-mipi-10bggr");
-      m_params.set("scene-mode", "hdr");
-      m_params.set("hdr-need-1x", "true");
+      imageSize = camera::ImageSize(1920, 1080);
       break;
     default:
       DEBUG_PRINT("\nHires startRecording called with invalid mode\n");
       assert(0);
   }
 
+  m_params.setVideoSize(imageSize);
+
+  // TODO(mereweth) - go smaller?
+  imageSize = camera::ImageSize(320, 240);
+  m_params.setPreviewSize(imageSize);
   stat = m_params.commit();
   assert(stat == 0);
 
+  const camera::ImageSize getSize = m_params.getVideoSize();
+  DEBUG_PRINT(HIRES_PCOLOR "\nHires has raw size %s; width %d; height %d\n",
+              m_params.get("raw-size").c_str(),
+              getSize.width,
+              getSize.height);
+
+  stat = m_params.commit();
+  assert(stat == 0);
+
+  assert(0 == pthread_mutex_lock(&m_cameraFrameLock));
+  m_frameReady = false;
+  m_recording = true;
+  m_framesAcquired = 0;
+  m_frameStopRecording = frames - 1; // zero-index
+
   stat = this->activate();
   if (stat) {
+    assert(0 == pthread_mutex_unlock(&m_cameraFrameLock));
     return stat;
   }
-  m_recording = true;
-  return m_cameraPtr->startRecording();
+
+  stat = m_cameraPtr->startRecording();
+  if (stat) {
+    assert(0 == pthread_mutex_unlock(&m_cameraFrameLock));
+    this->deactivate();
+    return stat;
+  }
+
+  while (!m_frameReady) {
+    assert(0 == pthread_cond_wait(&m_cameraFrameReady, &m_cameraFrameLock));
+  }
+
+  assert(0 == pthread_mutex_unlock(&m_cameraFrameLock));
+
+  gettimeofday(&tv,NULL);
+  DEBUG_PRINT(HIRES_PCOLOR "\nHires Video first callback at time %f\n" KNRM,
+              tv.tv_sec + tv.tv_usec / 1000000.0);
+
+  return 0;
 }
 
 void Hires::stopRecording() {
@@ -249,6 +290,16 @@ void Hires::onVideoFrame(camera::ICameraFrame *frame) {
   gettimeofday(&tv,NULL);
   DEBUG_PRINT(HIRES_PCOLOR "\nHires Video callback at time %f; size %u\n" KNRM,
               tv.tv_sec + tv.tv_usec / 1000000.0, frame->size);
+
+  m_framesAcquired++;
+
+  assert(0 == pthread_mutex_lock(&m_cameraFrameLock));
+
+  m_frameReady = true;
+
+  assert(0 == pthread_cond_signal(&m_cameraFrameReady));
+
+  assert(0 == pthread_mutex_unlock(&m_cameraFrameLock));
 }
 
 void Hires::onPictureFrame(camera::ICameraFrame *frame) {

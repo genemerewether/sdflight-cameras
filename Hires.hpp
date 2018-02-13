@@ -23,7 +23,7 @@ public:
 
   typedef enum {
     HIRES_VID_4K,
-    HIRES_VID_4K_HDR,
+    HIRES_VID_MAX_HDR,
     HIRES_VID_1080P,
     HIRES_VID_1080P_HDR,
     HIRES_VIDEO_MODE_MAX
@@ -33,9 +33,12 @@ public:
 
   ~Hires();
 
+  void recordingAutoStop();
+
   int takePicture(HiresImageMode mode = Hires::HIRES_IMG_13MP);
 
-  int startRecording(HiresVideoMode mode = Hires::HIRES_VID_4K);
+  int startRecording(HiresVideoMode mode = Hires::HIRES_VID_4K,
+                     int frames = -1);
 
   void stopRecording();
 
@@ -68,6 +71,11 @@ private:
   bool m_recording;
   
   bool m_save;
+
+  unsigned int m_framesAcquired;
+
+  // -1 means don't stop until commanded
+  int m_frameStopRecording;
 
   HiresImageMode m_imageMode;
 
