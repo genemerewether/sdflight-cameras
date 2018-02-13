@@ -217,6 +217,7 @@ int Hires::startRecording(HiresVideoMode mode,
   // TODO(mereweth) - go smaller?
   imageSize = camera::ImageSize(320, 240);
   m_params.setPreviewSize(imageSize);
+
   stat = m_params.commit();
   assert(stat == 0);
 
@@ -225,9 +226,6 @@ int Hires::startRecording(HiresVideoMode mode,
               m_params.get("raw-size").c_str(),
               getSize.width,
               getSize.height);
-
-  stat = m_params.commit();
-  assert(stat == 0);
 
   assert(0 == pthread_mutex_lock(&m_cameraFrameLock));
   m_frameReady = false;
