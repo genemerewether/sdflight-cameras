@@ -1,4 +1,4 @@
-SRC = Hires Optic
+SRC = Hires Optic Encoder
 
 BIN = main main_optic main_hires main_loop # main_thread main_simul_gbl main_simul
 
@@ -17,7 +17,7 @@ CXXFLAGS = -I. -g \
 	-fcheck-new \
 	-Wnon-virtual-dtor
 
-LIBS = -lpthread -lcamera # missing symlink -lcamparams # not needed -ldl -lm -lrt -lutil
+LIBS = -lpthread -lcamera -lOmxVenc -lOmxCore -lglib-2.0 -lcutils -llog # missing symlink -lcamparams # not needed -ldl -lm -lrt -lutil
 
 all: $(BIN)
 
@@ -27,7 +27,7 @@ ifneq (,$(filter $(uname_m),x86_64 x86)) # cross-compiling
 
 	CXX = $(HEXAGON_SDK_ROOT)/gcc-linaro-4.9-2014.11-x86_64_arm-linux-gnueabihf_linux/bin/arm-linux-gnueabihf-g++
 	AR = $(HEXAGON_SDK_ROOT)/gcc-linaro-4.9-2014.11-x86_64_arm-linux-gnueabihf_linux/bin/arm-linux-gnueabihf-ar
-	CXXFLAGS := $(CXXFLAGS) -I$(HEXAGON_SDK_ROOT)/incs
+	CXXFLAGS := $(CXXFLAGS) -I$(HEXAGON_SDK_ROOT)/incs -I$(HEXAGON_ARM_SYSROOT)/usr/include/omx
 	LIBS := -L $(HEXAGON_ARM_SYSROOT)/usr/lib/ $(HEXAGON_ARM_SYSROOT)/usr/lib/libcamparams.so.0 $(LIBS) $(HEXAGON_ARM_SYSROOT)/lib/libstdc++.so.6
 
 test_mai%: mai%
@@ -58,6 +58,7 @@ test: load
 else # native
 
 CXX = /usr/bin/g++
+CXXFLAGS = $(CXXFLAGS) -I/usr/include/omx
 AR = /usr/bin/ar
 LIBS := /usr/lib/libcamparams.so.0 $(LIBS) # missing symlink
 test: all

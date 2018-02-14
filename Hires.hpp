@@ -7,6 +7,9 @@
 
 #include "Debug.hpp"
 
+#ifndef SDFLIGHT_CAMERAS_HIRES_HPP
+#define SDFLIGHT_CAMERAS_HIRES_HPP
+
 class Hires : private camera::ICameraListener
 {
 public:
@@ -86,3 +89,5 @@ private:
   pthread_cond_t m_cameraFrameReady;
 
 }; // class Hires
+
+#endif // SDFLIGHT_CAMERAS_HIRES_HPP
