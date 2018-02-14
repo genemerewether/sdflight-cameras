@@ -4,16 +4,27 @@
 #include <time.h>
 #include "Debug.hpp"
 
+#include <media/hardware/HardwareAPI.h>
+
 #define ENCODER_PCOLOR KCYN
 
-Encoder::Encoder()
+Encoder::Encoder() :
+  m_omxEncoder(NULL),
+  m_omxEncoderState(OMX_StateInvalid)
 {
+  OMX_ERRORTYPE omxError;
   struct timeval tv;
   gettimeofday(&tv,NULL);
   DEBUG_PRINT(ENCODER_PCOLOR "\nEncoder constructor at time %f\n" KNRM,
               tv.tv_sec + tv.tv_usec / 1000000.0);
+  
+  assert(0 == pthread_mutex_init(&m_omxEncoderStateLock, 0));
 
-  OMX_ERRORTYPE omxError;
+  assert(0 == pthread_cond_init(&m_omxEncoderStateChange, 0));
+
+  omxError = OMX_Init();
+  assert(OMX_ErrorNone == omxError);
+
   OMX_CALLBACKTYPE callbacks = {
     .EventHandler = eventCallback,
     .EmptyBufferDone = emptyDoneCallback,
@@ -27,6 +38,46 @@ Encoder::Encoder()
     DEBUG_PRINT("Failed to find video.encoder.h263: 0x%x", omxError);
     assert(0);
   }
+
+  {   // extension "OMX.google.android.index.storeMetaDataInBuffers"
+    android::StoreMetaDataInBuffersParams meta_mode_param = {
+      .nSize = sizeof(android::StoreMetaDataInBuffersParams),
+      .nVersion = 0x00000101,
+      .nPortIndex = PORT_INDEX_IN,
+      .bStoreMetaData = OMX_TRUE,
+    };
+    omxError = OMX_SetParameter(m_omxEncoder
+                                (OMX_INDEXTYPE) OMX_QcomIndexParamVideoMetaBufferMode,
+                                (OMX_PTR) &meta_mode_param);
+  }
+  if (OMX_ErrorNone != omxError) {
+    DEBUG_PRINT(ENCODER_PCOLOR "Failed to enable Meta data mode: 0x%x" KNRM,
+                omxError);
+    assert(0);
+  }
+
+  omxError = OMX_GetState(m_omxEncoder, &m_omxEncoderState);
+  assert(OMX_ErrorNone == omxError);
+  gettimeofday(&tv,NULL);
+  DEBUG_PRINT(ENCODER_PCOLOR "\nOMX state %d at time %f\n" KNRM,
+              m_omxEncoderState,
+              tv.tv_sec + tv.tv_usec / 1000000.0);
+
+  omxError = OMX_SendCommand(m_omxEncoder, OMX_CommandStateSet,
+                             (OMX_U32)OMX_StateIdle, NULL);
+  assert(OMX_ErrorNone == omxError);
+
+  // TODO(mereweth)
+  // wait for EventHandler with OMX_EventCmdComplete, OMX_StateIdle
+  gettimeofday(&tv,NULL);
+  DEBUG_PRINT(ENCODER_PCOLOR "\nWait for OMX_StateIdle at time %f\n" KNRM,
+              tv.tv_sec + tv.tv_usec / 1000000.0);
+
+  assert(0 == pthread_mutex_lock(&m_omxEncoderStateLock));
+  while (m_omxEncoderState != OMX_StateIdle) {
+    assert(0 == pthread_cond_wait(&m_omxEncoderStateChange, &m_omxEncoderStateLock));
+  }
+  assert(0 == pthread_mutex_unlock(&m_omxEncoderStateLock));
 }
 
 Encoder::~Encoder()
@@ -44,6 +95,15 @@ Encoder::~Encoder()
 
   // TODO(mereweth)
   // wait for EventHandler with OMX_EventCmdComplete, OMX_StateIdle
+  gettimeofday(&tv,NULL);
+  DEBUG_PRINT(ENCODER_PCOLOR "\nWait for OMX_StateIdle at time %f\n" KNRM,
+              tv.tv_sec + tv.tv_usec / 1000000.0);
+
+  assert(0 == pthread_mutex_lock(&m_omxEncoderStateLock));
+  while (m_omxEncoderState != OMX_StateIdle) {
+    assert(0 == pthread_cond_wait(&m_omxEncoderStateChange, &m_omxEncoderStateLock));
+  }
+  assert(0 == pthread_mutex_unlock(&m_omxEncoderStateLock));
 
   omxError = OMX_SendCommand(m_omxEncoder, OMX_CommandStateSet,
                              (OMX_U32)OMX_StateLoaded, NULL);
@@ -54,9 +114,24 @@ Encoder::~Encoder()
 
   // TODO(mereweth)
   // wait for EventHandler with OMX_EventCmdComplete, OMX_StateLoaded
+  gettimeofday(&tv,NULL);
+  DEBUG_PRINT(ENCODER_PCOLOR "\nWait for OMX_StateLoaded at time %f\n" KNRM,
+              tv.tv_sec + tv.tv_usec / 1000000.0);
+  assert(0 == pthread_mutex_lock(&m_omxEncoderStateLock));
+  while (m_omxEncoderState != OMX_StateLoaded) {
+    assert(0 == pthread_cond_wait(&m_omxEncoderStateChange, &m_omxEncoderStateLock));
+  }
+  assert(0 == pthread_mutex_unlock(&m_omxEncoderStateLock));
 
   omxError = OMX_FreeHandle(m_omxEncoder);
   assert(OMX_ErrorNone == omxError);
+
+  omxError = OMX_Deinit();
+  assert(OMX_ErrorNone == omxError);
+
+  assert(0 == pthread_mutex_destroy(&m_omxEncoderStateLock));
+
+  assert(0 == pthread_cond_destroy(&m_omxEncoderStateChange));
 }
 
 OMX_ERRORTYPE Encoder::eventCallback(OMX_IN OMX_HANDLETYPE compHandle,
@@ -66,7 +141,26 @@ OMX_ERRORTYPE Encoder::eventCallback(OMX_IN OMX_HANDLETYPE compHandle,
                                      OMX_IN OMX_U32 data2,
                                      OMX_IN OMX_PTR eventData)
 {
+  struct timeval tv;
+  gettimeofday(&tv,NULL);
+  DEBUG_PRINT(ENCODER_PCOLOR "\neventCallback at time %f\n" KNRM,
+              tv.tv_sec + tv.tv_usec / 1000000.0);
+
   Encoder* comp = static_cast<Encoder*>(context);
+  assert(comp);
+
+  if (OMX_EventCmdComplete == event) {
+    if (OMX_CommandStateSet == (OMX_COMMANDTYPE) data1) {
+      assert(0 == pthread_mutex_lock(&comp->m_omxEncoderStateLock));
+
+      comp->m_omxEncoderState = (OMX_STATETYPE) data2;
+
+      assert(0 == pthread_cond_signal(&comp->m_omxEncoderStateChange));
+
+      assert(0 == pthread_mutex_unlock(&comp->m_omxEncoderStateLock));
+    }
+  }
+
   return OMX_ErrorNone;
 }
 
@@ -74,6 +168,11 @@ OMX_ERRORTYPE Encoder::emptyDoneCallback(OMX_IN OMX_HANDLETYPE compHandle,
                                          OMX_IN OMX_PTR context,
                                          OMX_IN OMX_BUFFERHEADERTYPE* buffer)
 {
+  struct timeval tv;
+  gettimeofday(&tv,NULL);
+  DEBUG_PRINT(ENCODER_PCOLOR "\nemptyDoneCallback at time %f\n" KNRM,
+              tv.tv_sec + tv.tv_usec / 1000000.0);
+
   Encoder* comp = static_cast<Encoder*>(context);
   return OMX_ErrorNone;
 }
@@ -82,6 +181,11 @@ OMX_ERRORTYPE Encoder::fillDoneCallback(OMX_IN OMX_HANDLETYPE compHandle,
                                         OMX_IN OMX_PTR context,
                                         OMX_IN OMX_BUFFERHEADERTYPE* buffer)
 {
+  struct timeval tv;
+  gettimeofday(&tv,NULL);
+  DEBUG_PRINT(ENCODER_PCOLOR "\nfillDoneCallback at time %f\n" KNRM,
+              tv.tv_sec + tv.tv_usec / 1000000.0);
+
   Encoder* comp = static_cast<Encoder*>(context);
   return OMX_ErrorNone;
 }

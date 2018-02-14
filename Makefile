@@ -27,7 +27,7 @@ ifneq (,$(filter $(uname_m),x86_64 x86)) # cross-compiling
 
 	CXX = $(HEXAGON_SDK_ROOT)/gcc-linaro-4.9-2014.11-x86_64_arm-linux-gnueabihf_linux/bin/arm-linux-gnueabihf-g++
 	AR = $(HEXAGON_SDK_ROOT)/gcc-linaro-4.9-2014.11-x86_64_arm-linux-gnueabihf_linux/bin/arm-linux-gnueabihf-ar
-	CXXFLAGS := $(CXXFLAGS) -I$(HEXAGON_SDK_ROOT)/incs -I$(HEXAGON_ARM_SYSROOT)/usr/include/omx
+	CXXFLAGS := $(CXXFLAGS) -I$(HEXAGON_ARM_SYSROOT)/usr/include/omx -I$(HEXAGON_ARM_SYSROOT)/usr/include/ #-I$(HEXAGON_SDK_ROOT)/incs
 	LIBS := -L $(HEXAGON_ARM_SYSROOT)/usr/lib/ $(HEXAGON_ARM_SYSROOT)/usr/lib/libcamparams.so.0 $(LIBS) $(HEXAGON_ARM_SYSROOT)/lib/libstdc++.so.6
 
 test_mai%: mai%
