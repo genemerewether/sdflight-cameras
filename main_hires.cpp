@@ -1,3 +1,4 @@
+#include "Encoder.hpp"
 #include "Hires.hpp"
 #include "Debug.hpp"
 #include <pthread.h>
@@ -10,11 +11,11 @@
 #define MAIN_PCOLOR KGRN
 
 Hires hires(true);
+Encoder enc;
 
 int main(int argc, char *argv[]) {
-  struct timeval tv;
-  int stat;
-
+//   struct timeval tv;
+//   int stat;
 //   gettimeofday(&tv,NULL);
 //   DEBUG_PRINT(MAIN_PCOLOR "\nmain_hires; taking hires pictures at %f\n" KNRM,
 //               tv.tv_sec + tv.tv_usec / 1000000.0);
@@ -38,7 +39,8 @@ int main(int argc, char *argv[]) {
     DEBUG_PRINT(KRED "\nmain_hires; hires takePicture failed with value %d at %f\n" KNRM,
                 stat, tv.tv_sec + tv.tv_usec / 1000000.0);
                 }*/
-  sleep(1);
+
+  // sleep(1);
 
   assert(0 == hires.startRecording(Hires::HIRES_VID_4K, 10));
   hires.recordingAutoStop(); // 1-second loop like RTI, checking for enough frames acquired
