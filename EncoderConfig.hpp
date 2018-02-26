@@ -20,8 +20,8 @@ enum {
   IMG_COMP_PORT_INDEX_OUT = 1,
   IMG_COMP_DEFAULT_BITRATE = 5000000, // 5 Mbps
   IMG_COMP_DEFAULT_FRAMERATE = 30,
-  IMG_COMP_DEFAULT_WIDTH = 4208,
-  IMG_COMP_DEFAULT_HEIGHT = 3120
+  IMG_COMP_DEFAULT_WIDTH = 640,
+  IMG_COMP_DEFAULT_HEIGHT = 480
 };
 
 struct EncoderConfigType
@@ -32,10 +32,6 @@ struct EncoderConfigType
   OMX_VIDEO_CONTROLRATETYPE controlRate;
   OMX_S32 resyncMarkerSpacing;
   OMX_S32 intraRefreshMBCount;
-  OMX_S32 frameWidth;
-  OMX_S32 frameHeight;
-  OMX_S32 outputFrameWidth;
-  OMX_S32 outputFrameHeight;
   OMX_S32 bitrate;
   OMX_S32 framerate;
   OMX_S32 rotation;

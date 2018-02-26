@@ -54,7 +54,67 @@ OMX_ERRORTYPE Configure(OMX_HANDLETYPE encoder,
                               (OMX_PTR) &avc);
   assert(omxError == OMX_ErrorNone);
 
+  // TODO(mereweth) - IDR Period
+
+  // TODO(mereweth) - Error correction
+
+  // TODO(mereweth) - extraData
+
+  // TODO(mereweth) - LTR encoding settings
+
+  OMX_PARAM_PORTDEFINITIONTYPE inPortDef;
+  inPortDef.nSize = sizeof(inPortDef);
+  inPortDef.nPortIndex = (OMX_U32) IMG_COMP_PORT_INDEX_IN;
+  omxError = OMX_GetParameter(encoder,
+                              OMX_IndexParamPortDefinition,
+                              (OMX_PTR) &inPortDef);
+  assert(omxError == OMX_ErrorNone);
+
+  inPortDef.format.video.nFrameWidth = IMG_COMP_DEFAULT_WIDTH;
+  inPortDef.format.video.nFrameHeight = IMG_COMP_DEFAULT_HEIGHT;
+  inPortDef.nBufferCountActual = inPortDef.nBufferCountMin;
+
+  omxError = OMX_SetParameter(encoder,
+                              OMX_IndexParamPortDefinition,
+                              (OMX_PTR) &inPortDef);
+  assert(omxError == OMX_ErrorNone);
+
+  OMX_PARAM_PORTDEFINITIONTYPE outPortDef;
+  outPortDef.nSize = sizeof(outPortDef);
+  outPortDef.nPortIndex = (OMX_U32) IMG_COMP_PORT_INDEX_OUT;
+  omxError = OMX_GetParameter(encoder,
+                              OMX_IndexParamPortDefinition,
+                              (OMX_PTR) &outPortDef);
+  assert(omxError == OMX_ErrorNone);
+
+  outPortDef.format.video.nFrameWidth = IMG_COMP_DEFAULT_WIDTH;
+  outPortDef.format.video.nFrameHeight = IMG_COMP_DEFAULT_HEIGHT;
+  outPortDef.nBufferCountActual = outPortDef.nBufferCountMin;
+  outPortDef.format.video.xFramerate = config.framerate << 16;
+
+  omxError = OMX_SetParameter(encoder,
+                              OMX_IndexParamPortDefinition,
+                              (OMX_PTR) &outPortDef);
+  assert(omxError == OMX_ErrorNone);
+
+  OMX_VIDEO_PARAM_BITRATETYPE bitrate;
+  bitrate.nSize = sizeof(bitrate);
+  bitrate.nPortIndex = (OMX_U32) IMG_COMP_PORT_INDEX_OUT;
+  omxError = OMX_GetParameter(encoder,
+                              OMX_IndexParamVideoBitrate,
+                              (OMX_PTR) &bitrate);
+  assert(omxError == OMX_ErrorNone);
+
+  bitrate.eControlRate = config.controlRate;
+  bitrate.nTargetBitrate = config.bitrate;
+
+  omxError = OMX_SetParameter(encoder,
+                              OMX_IndexParamVideoBitrate,
+                              (OMX_PTR) &bitrate);
+  assert(omxError == OMX_ErrorNone);
+
   return OMX_ErrorNone;
 }
+
 
 } // end namespace EncoderConfig
