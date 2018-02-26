@@ -2,7 +2,7 @@ SRC = Hires Optic Encoder
 
 BIN = main main_optic main_hires main_loop # main_thread main_simul_gbl main_simul
 
-DEPS = $(foreach name,$(SRC),$(name).hpp) Debug.hpp
+DEPS = $(foreach name,$(SRC),$(name).hpp) Debug.hpp EncoderConfig.hpp
 OBJ = $(foreach name,$(sort $(SRC) $(BIN)),$(name).o)
 SLIB = $(foreach name,$(SRC),lib$(name).a)
 
@@ -15,7 +15,9 @@ CXXFLAGS = -I. -g \
 	-Wno-unused-parameter \
 	-Wno-long-long \
 	-fcheck-new \
-	-Wnon-virtual-dtor
+	-Wnon-virtual-dtor \
+	-std=c++03 # \
+	#-std=gnu++0x
 
 LIBS = -lpthread -lcamera -lOmxVenc -lOmxCore -lglib-2.0 -lcutils -llog # missing symlink -lcamparams # not needed -ldl -lm -lrt -lutil
 
@@ -27,7 +29,12 @@ ifneq (,$(filter $(uname_m),x86_64 x86)) # cross-compiling
 
 	CXX = $(HEXAGON_SDK_ROOT)/gcc-linaro-4.9-2014.11-x86_64_arm-linux-gnueabihf_linux/bin/arm-linux-gnueabihf-g++
 	AR = $(HEXAGON_SDK_ROOT)/gcc-linaro-4.9-2014.11-x86_64_arm-linux-gnueabihf_linux/bin/arm-linux-gnueabihf-ar
-	CXXFLAGS := $(CXXFLAGS) -I$(HEXAGON_ARM_SYSROOT)/usr/include/omx -I$(HEXAGON_ARM_SYSROOT)/usr/include/ #-I$(HEXAGON_SDK_ROOT)/incs
+	CXXFLAGS := $(CXXFLAGS) -I$(HEXAGON_SDK_ROOT)/incs \
+				-I$(HEXAGON_SDK_ROOT)/incs/stddef \
+				-I$(HEXAGON_SDK_ROOT)/gcc-linaro-4.9-2014.11-x86_64_arm-linux-gnueabihf_linux/arm-linux-gnueabihf/include/c++/4.9.3/ \
+				-I$(HEXAGON_ARM_SYSROOT)/usr/include/omx \
+				-I$(HEXAGON_ARM_SYSROOT)/usr/include/ \
+				-D__GLIBC_HAVE_LONG_LONG
 	LIBS := -L $(HEXAGON_ARM_SYSROOT)/usr/lib/ $(HEXAGON_ARM_SYSROOT)/usr/lib/libcamparams.so.0 $(LIBS) $(HEXAGON_ARM_SYSROOT)/lib/libstdc++.so.6
 
 test_mai%: mai%
@@ -78,6 +85,9 @@ mai%: mai%.cpp $(SLIB)
 
 %.o: %.cpp $(DEPS)
 	$(CXX) -c -o $@ $< $(CXXFLAGS)
+
+libEncoder.a: Encoder.o EncoderConfig.o $(DEPS)
+	$(AR) $(AR_FLAGS) $@ $< EncoderConfig.o
 
 lib%.a: %.o $(DEPS)
 	$(AR) $(AR_FLAGS) $@ $<

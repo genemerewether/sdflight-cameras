@@ -1,4 +1,5 @@
 #include "Encoder.hpp"
+#include "EncoderConfig.hpp"
 #include <assert.h>
 #include <sys/time.h>
 #include <time.h>
@@ -17,7 +18,7 @@ Encoder::Encoder() :
   gettimeofday(&tv,NULL);
   DEBUG_PRINT(ENCODER_PCOLOR "\nEncoder constructor at time %f\n" KNRM,
               tv.tv_sec + tv.tv_usec / 1000000.0);
-  
+
   assert(0 == pthread_mutex_init(&m_omxEncoderStateLock, 0));
 
   assert(0 == pthread_cond_init(&m_omxEncoderStateChange, 0));
@@ -35,18 +36,18 @@ Encoder::Encoder() :
                            (OMX_STRING)"OMX.qcom.video.encoder.avc",
                            this, &callbacks);
   if (OMX_ErrorNone != omxError) {
-    DEBUG_PRINT("Failed to find video.encoder.h263: 0x%x", omxError);
+    DEBUG_PRINT("Failed to find video.encoder.avc: 0x%x", omxError);
     assert(0);
   }
 
   {   // extension "OMX.google.android.index.storeMetaDataInBuffers"
     android::StoreMetaDataInBuffersParams meta_mode_param = {
       .nSize = sizeof(android::StoreMetaDataInBuffersParams),
-      .nVersion = 0x00000101,
-      .nPortIndex = PORT_INDEX_IN,
+      .nVersion = EncoderConfig::IMG_COMP_OMX_SPEC_VERSION,
+      .nPortIndex = EncoderConfig::IMG_COMP_PORT_INDEX_IN,
       .bStoreMetaData = OMX_TRUE,
     };
-    omxError = OMX_SetParameter(m_omxEncoder
+    omxError = OMX_SetParameter(m_omxEncoder,
                                 (OMX_INDEXTYPE) OMX_QcomIndexParamVideoMetaBufferMode,
                                 (OMX_PTR) &meta_mode_param);
   }
@@ -54,6 +55,34 @@ Encoder::Encoder() :
     DEBUG_PRINT(ENCODER_PCOLOR "Failed to enable Meta data mode: 0x%x" KNRM,
                 omxError);
     assert(0);
+  }
+
+  // TODO(mereweth) - configure encoder
+  {
+    using namespace EncoderConfig;
+    EncoderConfigType config = {
+        .codec = OMX_VIDEO_CodingAVC,
+        .controlRate = OMX_Video_ControlRateVariable,
+        .resyncMarkerSpacing = 0,
+        .intraRefreshMBCount = 0,
+        .frameWidth = IMG_COMP_DEFAULT_WIDTH,
+        .frameHeight = IMG_COMP_DEFAULT_HEIGHT,
+        .outputFrameWidth = IMG_COMP_DEFAULT_WIDTH,
+        .outputFrameHeight = IMG_COMP_DEFAULT_HEIGHT,
+        .bitrate = IMG_COMP_DEFAULT_BITRATE,
+        .framerate = IMG_COMP_DEFAULT_FRAMERATE,
+        .rotation = 0,
+        .intraPeriod = IMG_COMP_DEFAULT_FRAMERATE * 2,
+        .minQp = 2,
+        .maxQp = 31,
+        .extraData = OMX_FALSE,
+        .LTRMode = 0,
+        .LTRCount = 0,
+        .LTRPeriod = 0
+    };
+
+    omxError = Configure(m_omxEncoder, config);
+    assert(OMX_ErrorNone == omxError);
   }
 
   omxError = OMX_GetState(m_omxEncoder, &m_omxEncoderState);
