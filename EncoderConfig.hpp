@@ -21,7 +21,9 @@ enum {
   IMG_COMP_DEFAULT_BITRATE = 5000000, // 5 Mbps
   IMG_COMP_DEFAULT_FRAMERATE = 30,
   IMG_COMP_DEFAULT_WIDTH = 640,
-  IMG_COMP_DEFAULT_HEIGHT = 480
+  IMG_COMP_DEFAULT_HEIGHT = 480,
+  IMG_COMP_IN_BUFFER_SIZE = 1000,
+  IMG_COMP_OUT_BUFFER_SIZE = 1000
 };
 
 struct EncoderConfigType
@@ -35,6 +37,8 @@ struct EncoderConfigType
   OMX_S32 bitrate;
   OMX_S32 framerate;
   OMX_S32 rotation;
+  OMX_S32 inBufferCount;
+  OMX_S32 outBufferCount;
   OMX_S32 intraPeriod;
   OMX_S32 minQp;
   OMX_S32 maxQp;

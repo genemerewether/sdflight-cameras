@@ -32,6 +32,10 @@ private:
 
   OMX_STATETYPE m_omxEncoderState;
 
+  OMX_BUFFERHEADERTYPE** m_omxInputBuffers;
+
+  OMX_BUFFERHEADERTYPE** m_omxOutputBuffers;
+
   pthread_mutex_t m_omxEncoderStateLock;
 
   pthread_cond_t m_omxEncoderStateChange;

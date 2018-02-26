@@ -73,6 +73,7 @@ OMX_ERRORTYPE Configure(OMX_HANDLETYPE encoder,
   inPortDef.format.video.nFrameWidth = IMG_COMP_DEFAULT_WIDTH;
   inPortDef.format.video.nFrameHeight = IMG_COMP_DEFAULT_HEIGHT;
   inPortDef.nBufferCountActual = inPortDef.nBufferCountMin;
+  config.inBufferCount = inPortDef.nBufferCountMin;
 
   omxError = OMX_SetParameter(encoder,
                               OMX_IndexParamPortDefinition,
@@ -90,7 +91,8 @@ OMX_ERRORTYPE Configure(OMX_HANDLETYPE encoder,
   outPortDef.format.video.nFrameWidth = IMG_COMP_DEFAULT_WIDTH;
   outPortDef.format.video.nFrameHeight = IMG_COMP_DEFAULT_HEIGHT;
   outPortDef.nBufferCountActual = outPortDef.nBufferCountMin;
-  outPortDef.format.video.xFramerate = config.framerate << 16;
+  config.outBufferCount = outPortDef.nBufferCountMin;
+  outPortDef.format.video.xFramerate = config.framerate;
 
   omxError = OMX_SetParameter(encoder,
                               OMX_IndexParamPortDefinition,
@@ -112,6 +114,28 @@ OMX_ERRORTYPE Configure(OMX_HANDLETYPE encoder,
                               OMX_IndexParamVideoBitrate,
                               (OMX_PTR) &bitrate);
   assert(omxError == OMX_ErrorNone);
+
+  // TODO(mereweth) - quantization
+
+  // TODO(mereweth) - quantization parameter range
+
+  OMX_CONFIG_FRAMERATETYPE framerate;
+  framerate.nPortIndex = (OMX_U32) IMG_COMP_PORT_INDEX_IN;
+  omxError = OMX_GetConfig(encoder,
+                           OMX_IndexConfigVideoFramerate,
+                           (OMX_PTR) &framerate);
+  assert(omxError == OMX_ErrorNone);
+
+  framerate.xEncodeFramerate = config.framerate;
+
+  omxError = OMX_SetConfig(encoder,
+                           OMX_IndexConfigVideoFramerate,
+                           (OMX_PTR) &framerate);
+  assert(omxError == OMX_ErrorNone);
+
+  // TODO(mereweth) - intra refresh
+
+  // TODO(mereweth) - rotation
 
   return OMX_ErrorNone;
 }

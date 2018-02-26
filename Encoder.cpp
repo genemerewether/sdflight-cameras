@@ -11,7 +11,9 @@
 
 Encoder::Encoder() :
   m_omxEncoder(NULL),
-  m_omxEncoderState(OMX_StateInvalid)
+  m_omxEncoderState(OMX_StateInvalid),
+  m_omxInputBuffers(NULL),
+  m_omxOutputBuffers(NULL)
 {
   OMX_ERRORTYPE omxError;
   struct timeval tv;
@@ -66,8 +68,10 @@ Encoder::Encoder() :
         .resyncMarkerSpacing = 0,
         .intraRefreshMBCount = 0,
         .bitrate = IMG_COMP_DEFAULT_BITRATE,
-        .framerate = IMG_COMP_DEFAULT_FRAMERATE,
+        .framerate = IMG_COMP_DEFAULT_FRAMERATE << 16,
         .rotation = 0,
+        .inBufferCount = 0,
+        .outBufferCount = 0,
         .intraPeriod = IMG_COMP_DEFAULT_FRAMERATE * 2,
         .minQp = 2,
         .maxQp = 31,
@@ -79,6 +83,32 @@ Encoder::Encoder() :
 
     omxError = Configure(m_omxEncoder, config);
     assert(OMX_ErrorNone == omxError);
+
+    m_omxInputBuffers = (OMX_BUFFERHEADERTYPE**)calloc(
+        config.inBufferCount, sizeof(OMX_BUFFERHEADERTYPE*));
+    assert(m_omxInputBuffers != NULL);
+
+    m_omxOutputBuffers = (OMX_BUFFERHEADERTYPE**)calloc(
+        config.outBufferCount, sizeof(OMX_BUFFERHEADERTYPE*));
+    assert(m_omxOutputBuffers != NULL);
+
+    for (int i = 0; i < config.inBufferCount; i++) {
+      omxError = OMX_AllocateBuffer(m_omxEncoder,
+                                    &m_omxInputBuffers[i],
+                                    (OMX_U32) IMG_COMP_PORT_INDEX_IN,
+                                    NULL,
+                                    IMG_COMP_IN_BUFFER_SIZE);
+      assert(OMX_ErrorNone == omxError);
+    }
+
+    for (int i = 0; i < config.outBufferCount; i++) {
+      omxError = OMX_AllocateBuffer(m_omxEncoder,
+                                    &m_omxOutputBuffers[i],
+                                    (OMX_U32) IMG_COMP_PORT_INDEX_OUT,
+                                    NULL,
+                                    IMG_COMP_OUT_BUFFER_SIZE);
+      assert(OMX_ErrorNone == omxError);
+    }
   }
 
   omxError = OMX_GetState(m_omxEncoder, &m_omxEncoderState);
