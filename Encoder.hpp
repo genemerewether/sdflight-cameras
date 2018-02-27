@@ -1,6 +1,8 @@
 #include "OMX_Core.h"
 #include "OMX_Component.h"
 
+#include "EncoderConfig.hpp"
+
 #include <pthread.h>
 
 #ifndef SDFLIGHT_CAMERAS_ENCODER_HPP
@@ -35,6 +37,8 @@ private:
   OMX_BUFFERHEADERTYPE** m_omxInputBuffers;
 
   OMX_BUFFERHEADERTYPE** m_omxOutputBuffers;
+
+  EncoderConfig::EncoderConfigType m_encoderConfig;
 
   pthread_mutex_t m_omxEncoderStateLock;
 

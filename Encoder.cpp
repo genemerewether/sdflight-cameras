@@ -13,7 +13,8 @@ Encoder::Encoder() :
   m_omxEncoder(NULL),
   m_omxEncoderState(OMX_StateInvalid),
   m_omxInputBuffers(NULL),
-  m_omxOutputBuffers(NULL)
+  m_omxOutputBuffers(NULL),
+  m_encoderConfig()
 {
   OMX_ERRORTYPE omxError;
   struct timeval tv;
@@ -82,6 +83,7 @@ Encoder::Encoder() :
 
   omxError = EncoderConfig::Configure(m_omxEncoder, config);
   assert(OMX_ErrorNone == omxError);
+  m_encoderConfig = config;
 
   omxError = OMX_GetState(m_omxEncoder, &m_omxEncoderState);
   assert(OMX_ErrorNone == omxError);
@@ -90,6 +92,7 @@ Encoder::Encoder() :
               m_omxEncoderState,
               tv.tv_sec + tv.tv_usec / 1000000.0);
 
+  // Transition to OMX_StateIdle
   omxError = OMX_SendCommand(m_omxEncoder, OMX_CommandStateSet,
                              (OMX_U32)OMX_StateIdle, NULL);
   assert(OMX_ErrorNone == omxError);
@@ -124,7 +127,6 @@ Encoder::Encoder() :
     assert(OMX_ErrorNone == omxError);
   }
 
-  // TODO(mereweth)
   // wait for EventHandler with OMX_EventCmdComplete, OMX_StateIdle
   gettimeofday(&tv,NULL);
   DEBUG_PRINT(ENCODER_PCOLOR "\nWait for OMX_StateIdle at time %f\n" KNRM,
@@ -132,6 +134,22 @@ Encoder::Encoder() :
 
   assert(0 == pthread_mutex_lock(&m_omxEncoderStateLock));
   while (m_omxEncoderState != OMX_StateIdle) {
+    assert(0 == pthread_cond_wait(&m_omxEncoderStateChange, &m_omxEncoderStateLock));
+  }
+  assert(0 == pthread_mutex_unlock(&m_omxEncoderStateLock));
+
+  // Transition to OMX_StateExecuting
+  omxError = OMX_SendCommand(m_omxEncoder, OMX_CommandStateSet,
+                             (OMX_U32)OMX_StateExecuting, NULL);
+  assert(OMX_ErrorNone == omxError);
+
+  // wait for EventHandler with OMX_EventCmdComplete, OMX_StateExecuting
+  gettimeofday(&tv,NULL);
+  DEBUG_PRINT(ENCODER_PCOLOR "\nWait for OMX_StateExecuting at time %f\n" KNRM,
+              tv.tv_sec + tv.tv_usec / 1000000.0);
+
+  assert(0 == pthread_mutex_lock(&m_omxEncoderStateLock));
+  while (m_omxEncoderState != OMX_StateExecuting) {
     assert(0 == pthread_cond_wait(&m_omxEncoderStateChange, &m_omxEncoderStateLock));
   }
   assert(0 == pthread_mutex_unlock(&m_omxEncoderStateLock));
@@ -150,7 +168,6 @@ Encoder::~Encoder()
                              (OMX_U32)OMX_StateIdle, NULL);
   assert(OMX_ErrorNone == omxError);
 
-  // TODO(mereweth)
   // wait for EventHandler with OMX_EventCmdComplete, OMX_StateIdle
   gettimeofday(&tv,NULL);
   DEBUG_PRINT(ENCODER_PCOLOR "\nWait for OMX_StateIdle at time %f\n" KNRM,
@@ -166,10 +183,35 @@ Encoder::~Encoder()
                              (OMX_U32)OMX_StateLoaded, NULL);
   assert(OMX_ErrorNone == omxError);
 
-  // TODO(mereweth)
   // free all input and output buffers
+  for (int i = 0; i < m_encoderConfig.inBufferCount; i++) {
+    omxError = OMX_FreeBuffer(m_omxEncoder,
+                              (OMX_U32) EncoderConfig::IMG_COMP_PORT_INDEX_IN,
+                              m_omxInputBuffers[i]);
+    m_omxInputBuffers[i] = NULL;
+    DEBUG_PRINT(ENCODER_PCOLOR "\nFree OMX inBuffer %d returned %x\n" KNRM,
+                i, omxError);
+    assert(OMX_ErrorNone == omxError);
+  }
 
-  // TODO(mereweth)
+  for (int i = 0; i < m_encoderConfig.outBufferCount; i++) {
+    omxError = OMX_FreeBuffer(m_omxEncoder,
+                              (OMX_U32) EncoderConfig::IMG_COMP_PORT_INDEX_OUT,
+                              m_omxOutputBuffers[i]);
+    m_omxOutputBuffers[i] = NULL;
+    DEBUG_PRINT(ENCODER_PCOLOR "\nFree OMX outBuffer %d returned %x\n" KNRM,
+                i, omxError);
+    assert(OMX_ErrorNone == omxError);
+  }
+
+  assert(m_omxInputBuffers != NULL);
+  free(m_omxInputBuffers);
+  m_omxInputBuffers = NULL;
+
+  assert(m_omxOutputBuffers != NULL);
+  free(m_omxOutputBuffers);
+  m_omxOutputBuffers = NULL;
+
   // wait for EventHandler with OMX_EventCmdComplete, OMX_StateLoaded
   gettimeofday(&tv,NULL);
   DEBUG_PRINT(ENCODER_PCOLOR "\nWait for OMX_StateLoaded at time %f\n" KNRM,
