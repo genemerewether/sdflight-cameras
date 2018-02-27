@@ -1,8 +1,9 @@
 SRC = Hires Optic Encoder
 
-BIN = main main_optic main_hires main_loop # main_thread main_simul_gbl main_simul
+BIN = main_hires main_optic # main main_loop # main_thread main_simul_gbl main_simul
 
-DEPS = $(foreach name,$(SRC),$(name).hpp) Debug.hpp EncoderConfig.hpp
+DEPS = Debug.hpp EncoderConfig.hpp
+HDR = $(foreach name,$(SRC),$(name).hpp) $(DEPS)
 OBJ = $(foreach name,$(sort $(SRC) $(BIN)),$(name).o)
 SLIB = $(foreach name,$(SRC),lib$(name).a)
 
@@ -83,7 +84,7 @@ EXTRA=
 mai%: mai%.cpp $(SLIB)
 	$(CXX) $(CXXFLAGS) $(EXTRA) $< -o $@ -Wl,--start-group $(filter-out $<,$^) $(LIBS) -Wl,--end-group
 
-%.o: %.cpp $(DEPS)
+%.o: %.cpp %.hpp $(DEPS)
 	$(CXX) -c -o $@ $< $(CXXFLAGS)
 
 libEncoder.a: Encoder.o EncoderConfig.o $(DEPS)

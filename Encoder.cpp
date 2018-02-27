@@ -59,57 +59,29 @@ Encoder::Encoder() :
     assert(0);
   }
 
-  // TODO(mereweth) - configure encoder
-  {
-    using namespace EncoderConfig;
-    EncoderConfigType config = {
-        .codec = OMX_VIDEO_CodingAVC,
-        .controlRate = OMX_Video_ControlRateVariable,
-        .resyncMarkerSpacing = 0,
-        .intraRefreshMBCount = 0,
-        .bitrate = IMG_COMP_DEFAULT_BITRATE,
-        .framerate = IMG_COMP_DEFAULT_FRAMERATE << 16,
-        .rotation = 0,
-        .inBufferCount = 0,
-        .outBufferCount = 0,
-        .intraPeriod = IMG_COMP_DEFAULT_FRAMERATE * 2,
-        .minQp = 2,
-        .maxQp = 31,
-        .extraData = OMX_FALSE,
-        .LTRMode = 0,
-        .LTRCount = 0,
-        .LTRPeriod = 0
-    };
+  EncoderConfig::EncoderConfigType config = {
+      .codec = OMX_VIDEO_CodingAVC,
+      .controlRate = OMX_Video_ControlRateVariable,
+      .resyncMarkerSpacing = 0,
+      .intraRefreshMBCount = 0,
+      .bitrate = EncoderConfig::IMG_COMP_DEFAULT_BITRATE,
+      .framerate = EncoderConfig::IMG_COMP_DEFAULT_FRAMERATE << 16,
+      .rotation = 0,
+      .inBufferCount = 0,
+      .outBufferCount = 0,
+      .inBufferSize = 0,
+      .outBufferSize = 0,
+      .intraPeriod = EncoderConfig::IMG_COMP_DEFAULT_FRAMERATE * 2,
+      .minQp = 2,
+      .maxQp = 31,
+      .extraData = OMX_FALSE,
+      .LTRMode = 0,
+      .LTRCount = 0,
+      .LTRPeriod = 0
+  };
 
-    omxError = Configure(m_omxEncoder, config);
-    assert(OMX_ErrorNone == omxError);
-
-    m_omxInputBuffers = (OMX_BUFFERHEADERTYPE**)calloc(
-        config.inBufferCount, sizeof(OMX_BUFFERHEADERTYPE*));
-    assert(m_omxInputBuffers != NULL);
-
-    m_omxOutputBuffers = (OMX_BUFFERHEADERTYPE**)calloc(
-        config.outBufferCount, sizeof(OMX_BUFFERHEADERTYPE*));
-    assert(m_omxOutputBuffers != NULL);
-
-    for (int i = 0; i < config.inBufferCount; i++) {
-      omxError = OMX_AllocateBuffer(m_omxEncoder,
-                                    &m_omxInputBuffers[i],
-                                    (OMX_U32) IMG_COMP_PORT_INDEX_IN,
-                                    NULL,
-                                    IMG_COMP_IN_BUFFER_SIZE);
-      assert(OMX_ErrorNone == omxError);
-    }
-
-    for (int i = 0; i < config.outBufferCount; i++) {
-      omxError = OMX_AllocateBuffer(m_omxEncoder,
-                                    &m_omxOutputBuffers[i],
-                                    (OMX_U32) IMG_COMP_PORT_INDEX_OUT,
-                                    NULL,
-                                    IMG_COMP_OUT_BUFFER_SIZE);
-      assert(OMX_ErrorNone == omxError);
-    }
-  }
+  omxError = EncoderConfig::Configure(m_omxEncoder, config);
+  assert(OMX_ErrorNone == omxError);
 
   omxError = OMX_GetState(m_omxEncoder, &m_omxEncoderState);
   assert(OMX_ErrorNone == omxError);
@@ -121,6 +93,36 @@ Encoder::Encoder() :
   omxError = OMX_SendCommand(m_omxEncoder, OMX_CommandStateSet,
                              (OMX_U32)OMX_StateIdle, NULL);
   assert(OMX_ErrorNone == omxError);
+
+  m_omxInputBuffers = (OMX_BUFFERHEADERTYPE**)calloc(
+      config.inBufferCount, sizeof(OMX_BUFFERHEADERTYPE*));
+  assert(m_omxInputBuffers != NULL);
+
+  m_omxOutputBuffers = (OMX_BUFFERHEADERTYPE**)calloc(
+      config.outBufferCount, sizeof(OMX_BUFFERHEADERTYPE*));
+  assert(m_omxOutputBuffers != NULL);
+
+  for (int i = 0; i < config.inBufferCount; i++) {
+    omxError = OMX_AllocateBuffer(m_omxEncoder,
+                                  &m_omxInputBuffers[i],
+                                  (OMX_U32) EncoderConfig::IMG_COMP_PORT_INDEX_IN,
+                                  NULL,
+                                  config.inBufferSize);
+    DEBUG_PRINT(ENCODER_PCOLOR "\nAllocate OMX inBuffer %d of size %d returned %x\n" KNRM,
+                i, config.inBufferSize, omxError);
+    assert(OMX_ErrorNone == omxError);
+  }
+
+  for (int i = 0; i < config.outBufferCount; i++) {
+    omxError = OMX_AllocateBuffer(m_omxEncoder,
+                                  &m_omxOutputBuffers[i],
+                                  (OMX_U32) EncoderConfig::IMG_COMP_PORT_INDEX_OUT,
+                                  NULL,
+                                  config.outBufferSize);
+    DEBUG_PRINT(ENCODER_PCOLOR "\nAllocate OMX outBuffer %d of size %d returned %x\n" KNRM,
+                i, config.inBufferSize, omxError);
+    assert(OMX_ErrorNone == omxError);
+  }
 
   // TODO(mereweth)
   // wait for EventHandler with OMX_EventCmdComplete, OMX_StateIdle

@@ -62,6 +62,10 @@ OMX_ERRORTYPE Configure(OMX_HANDLETYPE encoder,
 
   // TODO(mereweth) - LTR encoding settings
 
+  // ----------------------------------------------------------------------
+  // Input ports
+  // ----------------------------------------------------------------------
+
   OMX_PARAM_PORTDEFINITIONTYPE inPortDef;
   inPortDef.nSize = sizeof(inPortDef);
   inPortDef.nPortIndex = (OMX_U32) IMG_COMP_PORT_INDEX_IN;
@@ -79,6 +83,16 @@ OMX_ERRORTYPE Configure(OMX_HANDLETYPE encoder,
                               OMX_IndexParamPortDefinition,
                               (OMX_PTR) &inPortDef);
   assert(omxError == OMX_ErrorNone);
+
+  omxError = OMX_GetParameter(encoder,
+                              OMX_IndexParamPortDefinition,
+                              (OMX_PTR) &inPortDef);
+  assert(omxError == OMX_ErrorNone);
+  config.inBufferSize = inPortDef.nBufferSize;
+
+  // ----------------------------------------------------------------------
+  // Output ports
+  // ----------------------------------------------------------------------
 
   OMX_PARAM_PORTDEFINITIONTYPE outPortDef;
   outPortDef.nSize = sizeof(outPortDef);
@@ -98,6 +112,16 @@ OMX_ERRORTYPE Configure(OMX_HANDLETYPE encoder,
                               OMX_IndexParamPortDefinition,
                               (OMX_PTR) &outPortDef);
   assert(omxError == OMX_ErrorNone);
+
+  omxError = OMX_GetParameter(encoder,
+                              OMX_IndexParamPortDefinition,
+                              (OMX_PTR) &outPortDef);
+  assert(omxError == OMX_ErrorNone);
+  config.outBufferSize = outPortDef.nBufferSize;
+
+  // ----------------------------------------------------------------------
+  // Bitrate
+  // ----------------------------------------------------------------------
 
   OMX_VIDEO_PARAM_BITRATETYPE bitrate;
   bitrate.nSize = sizeof(bitrate);
