@@ -1,6 +1,6 @@
-SRC = Hires Optic Encoder
+SRC = Hires Optic Encoder Dual
 
-BIN = main_hires main_optic # main main_loop # main_thread main_simul_gbl main_simul
+BIN = main_hires main_optic main_optic_nostop main_simul main_simul_gbl # main main_loop # main_thread
 
 DEPS = Debug.hpp EncoderConfig.hpp
 HDR = $(foreach name,$(SRC),$(name).hpp) $(DEPS)
@@ -40,7 +40,7 @@ ifneq (,$(filter $(uname_m),x86_64 x86)) # cross-compiling
 
 test_mai%: mai%
 	adb push $< $(PUSHDIR)$<
-	adb shell $(PUSHDIR)$<
+	adb shell 'mkdir -p /home/linaro/tmp && cd /home/linaro/tmp && $(PUSHDIR)$<'
 
 test_multiproc: main_optic main_hires
 	$(foreach file,$^,adb push $(file) $(PUSHDIR)$(file);)

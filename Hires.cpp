@@ -21,7 +21,8 @@ Hires::Hires(bool save) :
   m_framesAcquired(0u),
   m_frameStopRecording(-1),
   m_imageMode(HIRES_IMAGE_MODE_MAX),
-  m_videoMode(HIRES_VIDEO_MODE_MAX)
+  m_videoMode(HIRES_VIDEO_MODE_MAX),
+  m_encoder()
 {
   struct timeval tv;
   gettimeofday(&tv,NULL);
@@ -73,6 +74,20 @@ Hires::~Hires() {
   assert(0 == pthread_mutex_destroy(&m_cameraFrameLock));
 
   assert(0 == pthread_cond_destroy(&m_cameraFrameReady));
+}
+
+void Hires::flowAutoStop() {
+  while (1) {
+    if ((m_frameStopRecording >= 0) &&
+        ((int) m_framesAcquired > m_frameStopRecording)) {
+      this->stopRecording();
+      DEBUG_PRINT(HIRES_PCOLOR "\nHires Video auto-deactivating; %u of %d acquired\n" KNRM,
+                  m_framesAcquired,
+                  m_frameStopRecording+1);
+      break;
+    }
+    sleep(1);
+  }
 }
 
 void Hires::recordingAutoStop() {
@@ -227,6 +242,8 @@ int Hires::startRecording(HiresVideoMode mode,
               getSize.width,
               getSize.height);
 
+  m_videoMode = mode;
+
   assert(0 == pthread_mutex_lock(&m_cameraFrameLock));
   m_frameReady = false;
   m_recording = true;
@@ -279,6 +296,14 @@ void Hires::onControl(const camera::ControlEvent& control) {
 void Hires::onPreviewFrame(camera::ICameraFrame *frame) {
   struct timeval tv;
   gettimeofday(&tv,NULL);
+
+  if ((m_frameStopRecording >= 0) &&
+      ((int) m_framesAcquired > m_frameStopRecording)) {
+    /*DEBUG_PRINT(HIRES_PCOLOR "\nHires Preview callback while deactivating at time %f\n" KNRM,
+                tv.tv_sec + tv.tv_usec / 1000000.0);*/
+    return;
+  }
+
   DEBUG_PRINT(HIRES_PCOLOR "\nHires Preview callback at time %f; size %u\n" KNRM,
               tv.tv_sec + tv.tv_usec / 1000000.0, frame->size);
 }
@@ -286,10 +311,47 @@ void Hires::onPreviewFrame(camera::ICameraFrame *frame) {
 void Hires::onVideoFrame(camera::ICameraFrame *frame) {
   struct timeval tv;
   gettimeofday(&tv,NULL);
+
+  if ((m_frameStopRecording >= 0) &&
+      ((int) m_framesAcquired > m_frameStopRecording)) {
+    /*DEBUG_PRINT(HIRES_PCOLOR "\nHires Video callback while deactivating at time %f\n" KNRM,
+                tv.tv_sec + tv.tv_usec / 1000000.0);*/
+    return;
+  }
+
   DEBUG_PRINT(HIRES_PCOLOR "\nHires Video callback at time %f; size %u\n" KNRM,
               tv.tv_sec + tv.tv_usec / 1000000.0, frame->size);
 
   m_framesAcquired++;
+
+  if (m_save) {
+    const char* fileName;
+    switch (m_videoMode) {
+      case HIRES_VID_4K:
+        fileName = "HIRES_VID_4K";
+        break;
+      case HIRES_VID_MAX_HDR:
+        fileName = "HIRES_VID_MAX_HDR";
+        break;
+      case HIRES_VID_1080P:
+        fileName = "HIRES_VID_1080P";
+        break;
+      case HIRES_VID_1080P_HDR:
+        fileName = "HIRES_VID_1080P_HDR";
+        break;
+      default:
+        DEBUG_PRINT("\nHires invalid video mode in onVideoFrame\n");
+        fileName = "HIRES_VID_UNKNOWN";
+    }
+    int fid = open(fileName,
+                   O_CREAT | O_WRONLY | O_APPEND,
+                   S_IRUSR | S_IWUSR |  S_IRGRP | S_IWGRP);
+    assert(fid != -1);
+
+    write(fid, frame->data, frame->size);
+
+    assert(close(fid) != -1);
+  }
 
   assert(0 == pthread_mutex_lock(&m_cameraFrameLock));
 

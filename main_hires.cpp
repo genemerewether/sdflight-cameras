@@ -1,4 +1,3 @@
-#include "Encoder.hpp"
 #include "Hires.hpp"
 #include "Debug.hpp"
 #include <pthread.h>
@@ -11,7 +10,6 @@
 #define MAIN_PCOLOR KGRN
 
 Hires hires(true);
-Encoder enc;
 
 int main(int argc, char *argv[]) {
 //   struct timeval tv;
@@ -48,15 +46,15 @@ int main(int argc, char *argv[]) {
   assert(0 == hires.startRecording(Hires::HIRES_VID_4K, 1));
   hires.recordingAutoStop(); // 1-second loop like RTI, checking for enough frames acquired
 
-  assert(0 == hires.startRecording(Hires::HIRES_VID_MAX_HDR));
-  usleep(1000 * 100);
-  hires.stopRecording();
-  assert(0 == hires.startRecording(Hires::HIRES_VID_1080P));
-  usleep(1000 * 100);
-  hires.stopRecording();
-  assert(0 == hires.startRecording(Hires::HIRES_VID_1080P_HDR));
-  usleep(1000 * 100);
-  hires.stopRecording();
+  // assert(0 == hires.startRecording(Hires::HIRES_VID_MAX_HDR));
+  // usleep(1000 * 100);
+  // hires.stopRecording();
+  // assert(0 == hires.startRecording(Hires::HIRES_VID_1080P));
+  // usleep(1000 * 100);
+  // hires.stopRecording();
+  // assert(0 == hires.startRecording(Hires::HIRES_VID_1080P_HDR));
+  // usleep(1000 * 100);
+  // hires.stopRecording();
 
   return 0;
 }

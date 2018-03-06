@@ -6,6 +6,7 @@
 #pragma GCC diagnostic pop
 
 #include "Debug.hpp"
+#include "Encoder.hpp"
 
 #ifndef SDFLIGHT_CAMERAS_HIRES_HPP
 #define SDFLIGHT_CAMERAS_HIRES_HPP
@@ -35,6 +36,8 @@ public:
   Hires(bool save = false);
 
   ~Hires();
+
+  void flowAutoStop();
 
   void recordingAutoStop();
 
@@ -72,7 +75,7 @@ private:
   bool m_frameReady;
 
   bool m_recording;
-  
+
   bool m_save;
 
   unsigned int m_framesAcquired;
@@ -83,6 +86,8 @@ private:
   HiresImageMode m_imageMode;
 
   HiresVideoMode m_videoMode;
+
+  Encoder m_encoder;
 
   pthread_mutex_t m_cameraFrameLock;
 
