@@ -20,7 +20,7 @@ int main(int argc, char *argv[]) {
   assert(0 == dual.activateOptic());
   usleep(1000 * 500);
   
-  //assert(0 == dual.activateHires());
+  assert(0 == dual.activateHires());
   //sleep(2);
   assert(0 == dual.takeHiresPicture());
   sleep(2);

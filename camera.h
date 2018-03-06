@@ -88,11 +88,11 @@ struct FaceData
     int32_t reye_blink;
 };
 
-struct FaceRoi
+typedef struct _FaceRoi
 {
   int32_t number_of_faces;
   FaceData  faces[MAX_FACES];
-};
+} FaceRoi;
 /**
  * Interface to an object that represents single image/metadata
  * frame

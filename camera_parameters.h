@@ -1,4 +1,4 @@
-/* Copyright (c) 2015, The Linux Foundataion. All rights reserved.
+/* Copyright (c) 2015-2016, The Linux Foundation. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -137,9 +137,11 @@ public:
      *
      * @return int : 0 on success
      */
-    int init(ICameraDevice* device);
+    virtual int init(ICameraDevice* device);
 
     virtual int writeObject(std::ostream& ps) const;
+    
+    int readObject(char *paramString);
 
     /**
      * get a string representation of the object
@@ -154,7 +156,7 @@ public:
      *
      * @return int : 0 on success
      */
-    int commit();
+    virtual int commit();
 
     /**
      * get preview sizes supported by the camera

@@ -42,17 +42,17 @@ int Dual::takeHiresPicture() {
 
 int Dual::activateHires() {
   assert(m_hires.m_cameraPtr != NULL);
-  int stat = 0; //m_hires.m_cameraPtr->startPreview();
+  int stat = m_hires.m_cameraPtr->startPreview();
   if (stat)
     return stat;
   else
-    return m_hires.m_cameraPtr->startRecording();
+    return 0; //m_hires.m_cameraPtr->startRecording();
 }
 
 void Dual::deactivateHires() {
   assert(m_hires.m_cameraPtr != NULL);
-  m_hires.m_cameraPtr->stopRecording();
-  //m_hires.m_cameraPtr->stopPreview();
+  //m_hires.m_cameraPtr->stopRecording();
+  m_hires.m_cameraPtr->stopPreview();
   return;
 }
 

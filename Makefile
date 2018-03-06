@@ -20,7 +20,7 @@ CXXFLAGS = -I. -g \
 	-std=c++03 # \
 	#-std=gnu++0x
 
-LIBS = -lpthread -lcamera -lOmxVenc -lOmxCore -lglib-2.0 -lcutils -llog # missing symlink -lcamparams # not needed -ldl -lm -lrt -lutil
+LIBS = -lpthread -ldl -lOmxVenc -lOmxCore -lglib-2.0 -lcutils -llog #-lqcamera2 -lhardware -lqcam -lmmcamera_interface # not needed -lm -lrt -lutil
 
 all: $(BIN)
 
@@ -36,7 +36,7 @@ ifneq (,$(filter $(uname_m),x86_64 x86)) # cross-compiling
 				-I$(HEXAGON_ARM_SYSROOT)/usr/include/omx \
 				-I$(HEXAGON_ARM_SYSROOT)/usr/include/ \
 				-D__GLIBC_HAVE_LONG_LONG
-	LIBS := -L $(HEXAGON_ARM_SYSROOT)/usr/lib/ $(HEXAGON_ARM_SYSROOT)/usr/lib/libcamparams.so.0 $(LIBS) $(HEXAGON_ARM_SYSROOT)/lib/libstdc++.so.6
+	LIBS := -L $(HEXAGON_ARM_SYSROOT)/usr/lib/ $(LIBS) $(HEXAGON_ARM_SYSROOT)/lib/libstdc++.so.6 $(HEXAGON_ARM_SYSROOT)/usr/lib/libcamparams.so.0 
 
 test_mai%: mai%
 	adb push $< $(PUSHDIR)$<
@@ -68,7 +68,7 @@ else # native
 CXX = /usr/bin/g++
 CXXFLAGS = $(CXXFLAGS) -I/usr/include/omx
 AR = /usr/bin/ar
-LIBS := /usr/lib/libcamparams.so.0 $(LIBS) # missing symlink
+LIBS := $(LIBS) # missing symlink /usr/lib/libcamparams.so.0 
 test: all
 	$(foreach file,$(BIN),./$(file))
 
@@ -81,8 +81,39 @@ AR_FLAGS=rcs
 
 EXTRA=
 
-mai%: mai%.cpp $(SLIB)
+mai%: mai%.cpp $(SLIB) libcamera.a
 	$(CXX) $(CXXFLAGS) $(EXTRA) $< -o $@ -Wl,--start-group $(filter-out $<,$^) $(LIBS) -Wl,--end-group
+
+LIBCAMERA_NAME = camera_memory camera_parameters qcamera2
+LIBCAMERA_HDR = camera.h camera_parameters.h camera_log.h camera_memory.h qcamera2.h qcamera_extensions.h QCamera2_Ext.h
+LIBCAMERA_CXXFLAGS = -w -I $(HEXAGON_ARM_SYSROOT)/usr/src/kernel/include/
+LIBCAMERA_SRC = $(foreach name,$(sort $(LIBCAMERA_NAME)),$(name).cpp)
+LIBCAMERA_OBJ = $(foreach name,$(sort $(LIBCAMERA_NAME)),$(name).o)
+libcamera.a: $(LIBCAMERA_SRC) $(LIBCAMERA_HDR)
+	$(CXX) $(CXXFLAGS) $(LIBCAMERA_CXXFLAGS) -c -o camera_memory.o camera_memory.cpp 
+	$(CXX) $(CXXFLAGS) $(LIBCAMERA_CXXFLAGS) -c -o camera_parameters.o camera_parameters.cpp
+	$(CXX) $(CXXFLAGS) $(LIBCAMERA_CXXFLAGS) -c -o qcamera2.o qcamera2.cpp
+	$(AR) $(AR_FLAGS) $@ $(LIBCAMERA_OBJ)
+
+LIBQCAMERA_HDR = 
+LIBQCAMERA_NAME = QCamera2Factory QCamera2Hal QCamera2HWI QCameraMem \
+	QCameraQueue QCameraCmdThread QCameraStateMachine QCameraChannel \
+	QCameraStream QCameraPostProc QCamera2HWICallbacks QCameraParameters QCameraThermalAdapter
+LIBQCAMERA_SRC = $(foreach name,$(sort $(LIBQCAMERA_NAME)),qcamera2/$(name).cpp)
+LIBQCAMERA_OBJ = $(foreach name,$(sort $(LIBQCAMERA_NAME)),qcamera2/$(name).o)
+LIBQCAMERA_CXXFLAGS = -w -I $(HEXAGON_ARM_SYSROOT)/usr/src/kernel/include/ -I qcamera2 \
+	-I $(HEXAGON_ARM_SYSROOT)/usr/include/mm_camera_interface/ \
+	-I $(HEXAGON_ARM_SYSROOT)/usr/include/glib-2.0/ \
+	-I $(HEXAGON_ARM_SYSROOT)/usr/lib/glib-2.0/include/ \
+	-I $(HEXAGON_ARM_SYSROOT)/usr/include/camera-hal/ \
+	-I $(HEXAGON_ARM_SYSROOT)/usr/include/ \
+	-I $(HEXAGON_ARM_SYSROOT)/usr/include/omx
+
+qcamera2/%.o: qcamera2/%.cpp $(LIBQCAMERA_HDR)
+	$(CXX) $(LIBQCAMERA_CXXFLAGS) -c -o $@ $<
+
+libqcamera2.a: $(LIBQCAMERA_OBJ)
+	$(AR) $(AR_FLAGS) $@ $(LIBQCAMERA_OBJ)
 
 %.o: %.cpp %.hpp $(DEPS)
 	$(CXX) -c -o $@ $< $(CXXFLAGS)
@@ -103,4 +134,4 @@ print:
 	@echo "LIBS: " $(LIBS)
 
 clean:
-	rm $(OBJ) $(SLIB) $(BIN)
+	rm $(OBJ) $(SLIB) $(BIN) libcamera.a
