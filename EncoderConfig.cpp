@@ -18,8 +18,8 @@ OMX_ERRORTYPE Configure(OMX_HANDLETYPE encoder,
   avc.nSize = sizeof(avc);
   avc.nPortIndex = (OMX_U32) IMG_COMP_PORT_INDEX_OUT; // output
   omxError = OMX_GetParameter(encoder,
-                            OMX_IndexParamVideoAvc,
-                            (OMX_PTR) &avc);
+                              OMX_IndexParamVideoAvc,
+                              (OMX_PTR) &avc);
   assert(omxError == OMX_ErrorNone);
 
   // TODO(mereweth) - support other quality settings (# of B and P frames)?

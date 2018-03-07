@@ -96,7 +96,7 @@ private:
 
   Encoder m_encoder;
 
-  ImageEncoder m_imageEncoder;
+  //ImageEncoder m_imageEncoder;
 
   pthread_mutex_t m_cameraFrameLock;
 
