@@ -13,7 +13,7 @@
 
 #define HIRES_CAM_TYPE 0
 
-#define HIRES_IMG_WAIT_SEC 1
+#define HIRES_IMG_WAIT_SEC 4
 
 Hires::Hires(bool save) :
   m_cameraPtr(NULL),
@@ -160,7 +160,7 @@ int Hires::takePicture(HiresImageMode mode) {
       imageSize = camera::ImageSize(320, 240);
       break;
     default:
-      DEBUG_PRINT("\nHires takePicture called with invalid mode\n");
+      DEBUG_PRINT(KRED "\nHires takePicture called with invalid mode\n" KNRM);
       assert(0);
   }
 
@@ -170,7 +170,7 @@ int Hires::takePicture(HiresImageMode mode) {
   assert(stat == 0);
 
   const camera::ImageSize getSize = m_params.getPictureSize();
-  DEBUG_PRINT(HIRES_PCOLOR "\nHires has raw size %s; width %d; height %d\n",
+  DEBUG_PRINT(HIRES_PCOLOR "\nHires has raw size %s; width %d; height %d\n" KNRM,
               m_params.get("raw-size").c_str(),
               getSize.width,
               getSize.height);
@@ -203,7 +203,7 @@ int Hires::takePicture(HiresImageMode mode) {
 				  &wait);
   }
   if (stat == ETIMEDOUT) {
-    DEBUG_PRINT(HIRES_PCOLOR "Hires timed out in takePicture\n");
+    DEBUG_PRINT(KRED "Hires timed out in takePicture\n" KNRM);
   }
 
   assert(0 == pthread_mutex_unlock(&m_cameraFrameLock));
@@ -243,7 +243,7 @@ int Hires::startRecording(HiresVideoMode mode,
       imageSize = camera::ImageSize(1920, 1080);
       break;
     default:
-      DEBUG_PRINT("\nHires startRecording called with invalid mode\n");
+      DEBUG_PRINT(KRED "\nHires startRecording called with invalid mode\n" KNRM);
       assert(0);
   }
 
@@ -257,7 +257,7 @@ int Hires::startRecording(HiresVideoMode mode,
   assert(stat == 0);
 
   const camera::ImageSize getSize = m_params.getVideoSize();
-  DEBUG_PRINT(HIRES_PCOLOR "\nHires has raw size %s; width %d; height %d\n",
+  DEBUG_PRINT(HIRES_PCOLOR "\nHires has raw size %s; width %d; height %d\n" KNRM,
               m_params.get("raw-size").c_str(),
               getSize.width,
               getSize.height);
@@ -360,7 +360,7 @@ void Hires::onVideoFrame(camera::ICameraFrame *frame) {
         fileName = "HIRES_VID_1080P_HDR";
         break;
       default:
-        DEBUG_PRINT("\nHires invalid video mode in onVideoFrame\n");
+        DEBUG_PRINT(KRED "\nHires invalid video mode in onVideoFrame\n" KNRM);
         fileName = "HIRES_VID_UNKNOWN";
     }
     int fid = open(fileName,
@@ -413,7 +413,7 @@ void Hires::onPictureFrame(camera::ICameraFrame *frame) {
         fileName = "HIRES_IMG_QVGA_HDR";
         break;
       default:
-        DEBUG_PRINT("\nHires invalid image mode in onPictureFrame\n");
+        DEBUG_PRINT(KRED "\nHires invalid image mode in onPictureFrame\n" KNRM);
         fileName = "HIRES_IMG_UNKNOWN";
     }
     int fid = open(fileName,
