@@ -9,6 +9,25 @@
 
 #include <qomx_core.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+OMX_ERRORTYPE OMX_Init_jpeg();
+
+OMX_ERRORTYPE OMX_Deinit_jpeg();
+
+OMX_ERRORTYPE OMX_GetHandle_jpeg(OMX_HANDLETYPE* handle,
+                                 OMX_STRING componentName,
+                                 OMX_PTR appData,
+                                 OMX_CALLBACKTYPE* callBacks);
+
+OMX_ERRORTYPE OMX_FreeHandle_jpeg(OMX_HANDLETYPE hComp);
+
+#ifdef __cplusplus
+}
+#endif
+
 #define ENCODER_PCOLOR KCYN
 
 ImageEncoder::ImageEncoder() :
@@ -28,7 +47,7 @@ ImageEncoder::ImageEncoder() :
 
   assert(0 == pthread_cond_init(&m_omxEncoderStateChange, 0));
 
-  omxError = OMX_Init();
+  omxError = OMX_Init_jpeg();
   assert(OMX_ErrorNone == omxError);
 
   OMX_CALLBACKTYPE callbacks = {
@@ -37,32 +56,13 @@ ImageEncoder::ImageEncoder() :
     .FillBufferDone = fillDoneCallback,
   };
 
-  // NOTE(mereweth) - adapted from hardware/qcom/camera/mm-image-codec/qomx_core/
-  // THIS IS NOT THREAD-SAFE!!!
-  omx_core_component_t core_inst;
-  omx_core_component_t *core_comp = &core_inst;
-  core_comp->lib_handle = dlopen("libqomx_jpegenc.so", RTLD_LAZY);
-  assert(core_comp->lib_handle);
-  core_comp->open = 1;
-  core_comp->create_comp_func = (create_comp_func_t) dlsym(core_comp->lib_handle, "create_component_fns");
-  assert(core_comp->create_comp_func);
-  core_comp->get_instance = (get_instance_t) dlsym(core_comp->lib_handle, "getInstance");
-  assert(core_comp->get_instance);
-  void* obj = (*core_comp->get_instance)();
-  assert(obj);
-  OMX_COMPONENTTYPE* comp = (OMX_COMPONENTTYPE*) (*core_comp->create_comp_func)(obj);
-  assert(comp);
-  m_omxEncoder = core_comp->handle[0] = (OMX_HANDLETYPE*)comp;
-
-  comp->SetCallbacks(comp, &callbacks, this);
-
-  /*omxError = OMX_GetHandle_jpeg(&m_omxEncoder,
+  omxError = OMX_GetHandle_jpeg(&m_omxEncoder,
                                 (OMX_STRING)"OMX.qcom.image.jpeg.encoder",
                                 this, &callbacks);
   if (OMX_ErrorNone != omxError) {
     DEBUG_PRINT("Failed to find image.jpeg.encoder: 0x%x", omxError);
     assert(0);
-    }*/
+  }
 
   ImageEncoderConfig::ImageEncoderConfigType config = {
       .codec = OMX_IMAGE_CodingJPEG, // OMX_IMAGE_CodingJPEG2K?
@@ -213,10 +213,10 @@ ImageEncoder::~ImageEncoder()
   }
   assert(0 == pthread_mutex_unlock(&m_omxEncoderStateLock));
 
-  //omxError = OMX_FreeHandle_jpeg(m_omxEncoder);
-  //assert(OMX_ErrorNone == omxError);
+  omxError = OMX_FreeHandle_jpeg(m_omxEncoder);
+  assert(OMX_ErrorNone == omxError);
 
-  omxError = OMX_Deinit();
+  omxError = OMX_Deinit_jpeg();
   assert(OMX_ErrorNone == omxError);
 
   assert(0 == pthread_mutex_destroy(&m_omxEncoderStateLock));
