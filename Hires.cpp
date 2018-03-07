@@ -7,15 +7,19 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
+#include <errno.h>
 
 #define HIRES_PCOLOR KBLU
 
 #define HIRES_CAM_TYPE 0
 
+#define HIRES_IMG_WAIT_SEC 1
+
 Hires::Hires(bool save) :
   m_cameraPtr(NULL),
   m_params(),
-  m_frameReady(false),
+  m_pictureReady(false),
+  m_videoReady(false),
   m_recording(false),
   m_save(save),
   m_framesAcquired(0u),
@@ -54,7 +58,9 @@ Hires::Hires(bool save) :
 
   stat = m_params.init(m_cameraPtr);
   assert(stat == 0);
-
+  
+  m_cameraPtr->addListener(this);
+  
   assert(0 == pthread_mutex_init(&m_cameraFrameLock, 0));
 
   assert(0 == pthread_cond_init(&m_cameraFrameReady, 0));
@@ -66,6 +72,8 @@ Hires::~Hires() {
   DEBUG_PRINT(HIRES_PCOLOR "\nHires destructor at time %f\n" KNRM,
               tv.tv_sec + tv.tv_usec / 1000000.0);
 
+  m_cameraPtr->removeListener(this);
+  
   if(m_cameraPtr != NULL) {
     camera::ICameraDevice::deleteInstance(&m_cameraPtr);
     m_cameraPtr = NULL;
@@ -173,7 +181,7 @@ int Hires::takePicture(HiresImageMode mode) {
   }
 
   assert(0 == pthread_mutex_lock(&m_cameraFrameLock));
-  m_frameReady = false;
+  m_pictureReady = false;
 
   stat = m_cameraPtr->takePicture();
   if (stat) {
@@ -182,8 +190,20 @@ int Hires::takePicture(HiresImageMode mode) {
     return stat;
   }
 
-  while (!m_frameReady) {
-    assert(0 == pthread_cond_wait(&m_cameraFrameReady, &m_cameraFrameLock));
+  struct timeval now;
+  gettimeofday(&now,NULL);
+  struct timespec wait;
+  wait.tv_sec = static_cast<unsigned int>(HIRES_IMG_WAIT_SEC) +
+    now.tv_sec;
+  wait.tv_nsec = now.tv_usec * 1000;
+
+  stat = 0;
+  while (!m_pictureReady && stat == 0) {
+    stat = pthread_cond_timedwait(&m_cameraFrameReady, &m_cameraFrameLock,
+				  &wait);
+  }
+  if (stat == ETIMEDOUT) {
+    DEBUG_PRINT(HIRES_PCOLOR "Hires timed out in takePicture\n");
   }
 
   assert(0 == pthread_mutex_unlock(&m_cameraFrameLock));
@@ -208,7 +228,7 @@ int Hires::startRecording(HiresVideoMode mode,
   }
 
   m_params.set("preview-format", "yuv420sp");
-  m_params.set("picture-format", "yuv420sp");
+  //m_params.set("picture-format", "yuv420sp");
 
   camera::ImageSize imageSize;
   switch (mode) {
@@ -245,7 +265,7 @@ int Hires::startRecording(HiresVideoMode mode,
   m_videoMode = mode;
 
   assert(0 == pthread_mutex_lock(&m_cameraFrameLock));
-  m_frameReady = false;
+  m_videoReady = false;
   m_recording = true;
   m_framesAcquired = 0;
   m_frameStopRecording = frames - 1; // zero-index
@@ -263,7 +283,7 @@ int Hires::startRecording(HiresVideoMode mode,
     return stat;
   }
 
-  while (!m_frameReady) {
+  while (!m_videoReady) {
     assert(0 == pthread_cond_wait(&m_cameraFrameReady, &m_cameraFrameLock));
   }
 
@@ -355,7 +375,7 @@ void Hires::onVideoFrame(camera::ICameraFrame *frame) {
 
   assert(0 == pthread_mutex_lock(&m_cameraFrameLock));
 
-  m_frameReady = true;
+  m_videoReady = true;
 
   assert(0 == pthread_cond_signal(&m_cameraFrameReady));
 
@@ -408,7 +428,7 @@ void Hires::onPictureFrame(camera::ICameraFrame *frame) {
 
   assert(0 == pthread_mutex_lock(&m_cameraFrameLock));
 
-  m_frameReady = true;
+  m_pictureReady = true;
 
   assert(0 == pthread_cond_signal(&m_cameraFrameReady));
 
@@ -425,13 +445,13 @@ void Hires::onMetadataFrame(camera::ICameraFrame *frame) {
 // Private functions
 int Hires::activate() {
   assert(m_cameraPtr != NULL);
-  m_cameraPtr->addListener(this);
+  //m_cameraPtr->addListener(this);
   return m_cameraPtr->startPreview();
 }
 
 void Hires::deactivate() {
   assert(m_cameraPtr != NULL);
-  m_cameraPtr->removeListener(this);
   m_cameraPtr->stopPreview();
+  //m_cameraPtr->removeListener(this);
   return;
 }

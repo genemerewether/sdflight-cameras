@@ -14,7 +14,7 @@ Optic optic(true);
 int main(int argc, char *argv[]) {
   struct timeval tv;
   gettimeofday(&tv,NULL);
-  DEBUG_PRINT(MAIN_PCOLOR "\nmain_optic; activating optic camera at %f\n" KNRM,
+  DEBUG_PRINT(MAIN_PCOLOR "\nmain_optic_nostop; activating optic camera at %f\n" KNRM,
               tv.tv_sec + tv.tv_usec / 1000000.0);
   assert(0 == optic.activate());
   while (1) {

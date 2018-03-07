@@ -1,6 +1,6 @@
-SRC = Hires Optic Encoder Dual
+SRC = Hires Optic Encoder
 
-BIN = main_hires main_optic main_optic_nostop main_simul main_simul_gbl # main main_loop # main_thread
+BIN = main_loop main_hires main_optic main_optic_nostop main_simul_gbl
 
 DEPS = Debug.hpp EncoderConfig.hpp
 HDR = $(foreach name,$(SRC),$(name).hpp) $(DEPS)
@@ -89,10 +89,13 @@ LIBCAMERA_HDR = camera.h camera_parameters.h camera_log.h camera_memory.h qcamer
 LIBCAMERA_CXXFLAGS = -g -w -I $(HEXAGON_ARM_SYSROOT)/usr/src/kernel/include/
 LIBCAMERA_SRC = $(foreach name,$(sort $(LIBCAMERA_NAME)),$(name).cpp)
 LIBCAMERA_OBJ = $(foreach name,$(sort $(LIBCAMERA_NAME)),$(name).o)
-libcamera.a: $(LIBCAMERA_SRC) $(LIBCAMERA_HDR)
-	$(CXX) $(CXXFLAGS) $(LIBCAMERA_CXXFLAGS) -c -o camera_memory.o camera_memory.cpp 
-	$(CXX) $(CXXFLAGS) $(LIBCAMERA_CXXFLAGS) -c -o camera_parameters.o camera_parameters.cpp
-	$(CXX) $(CXXFLAGS) $(LIBCAMERA_CXXFLAGS) -c -o qcamera2.o qcamera2.cpp
+camera_memory.o: camera_memory.cpp
+	$(CXX) $(CXXFLAGS) $(LIBCAMERA_CXXFLAGS) -c -o $@ $<
+camera_parameters.o: camera_parameters.cpp
+	$(CXX) $(CXXFLAGS) $(LIBCAMERA_CXXFLAGS) -c -o $@ $<
+qcamera2.o: qcamera2.cpp
+	$(CXX) $(CXXFLAGS) $(LIBCAMERA_CXXFLAGS) -c -o $@ $<
+libcamera.a: $(LIBCAMERA_OBJ) $(LIBCAMERA_HDR)
 	$(AR) $(AR_FLAGS) $@ $(LIBCAMERA_OBJ)
 
 LIBQCAMERA_HDR = 

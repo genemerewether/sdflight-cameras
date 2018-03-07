@@ -41,9 +41,9 @@ public:
 
   void recordingAutoStop();
 
-  int takePicture(HiresImageMode mode = Hires::HIRES_IMG_13MP);
+  int takePicture(HiresImageMode mode = HIRES_IMG_13MP);
 
-  int startRecording(HiresVideoMode mode = Hires::HIRES_VID_4K,
+  int startRecording(HiresVideoMode mode = HIRES_VID_4K,
                      int frames = -1);
 
   void stopRecording();
@@ -72,7 +72,9 @@ private:
 
   camera::CameraParams m_params;
 
-  bool m_frameReady;
+  bool m_pictureReady;
+  
+  bool m_videoReady;
 
   bool m_recording;
 

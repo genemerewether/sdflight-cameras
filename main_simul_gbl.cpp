@@ -20,12 +20,12 @@ int main(int argc, char *argv[]) {
   usleep(1000 * 500);
 
   gettimeofday(&tv,NULL);
-  DEBUG_PRINT(MAIN_PCOLOR "\nmain_simul_gbl; taking hires picture at %f\n" KNRM,
+  DEBUG_PRINT(MAIN_PCOLOR "\ntaking hires picture at %f\n" KNRM,
               tv.tv_sec + tv.tv_usec / 1000000.0);
   stat = hires.takePicture();
   if (stat) {
     gettimeofday(&tv,NULL);
-    DEBUG_PRINT(KRED "\nmain_simul_gbl; hires takePicture failed with value %d at %f\n" KNRM,
+    DEBUG_PRINT(KRED "\nhires takePicture failed with value %d at %f\n" KNRM,
                 stat, tv.tv_sec + tv.tv_usec / 1000000.0);
   }
   assert(stat == 0);
