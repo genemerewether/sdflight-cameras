@@ -15,18 +15,14 @@ int main(int argc, char *argv[]) {
   assert(0 == hires.startRecording(Hires::HIRES_VID_4K, 10));
   hires.recordingAutoStop(); // 1-second loop like RTI, checking for enough frames acquired
 
-  assert(0 == hires.startRecording(Hires::HIRES_VID_4K, 1));
+  assert(0 == hires.startRecording(Hires::HIRES_VID_MAX_HDR, 1));
   hires.recordingAutoStop(); // 1-second loop like RTI, checking for enough frames acquired
   
-  // assert(0 == hires.startRecording(Hires::HIRES_VID_MAX_HDR));
-  // usleep(1000 * 100);
-  // hires.stopRecording();
-  // assert(0 == hires.startRecording(Hires::HIRES_VID_1080P));
-  // usleep(1000 * 100);
-  // hires.stopRecording();
-  // assert(0 == hires.startRecording(Hires::HIRES_VID_1080P_HDR));
-  // usleep(1000 * 100);
-  // hires.stopRecording();
+  assert(0 == hires.startRecording(Hires::HIRES_VID_720P_HDR, 30));
+  hires.recordingAutoStop(); // 1-second loop like RTI, checking for enough frames acquired
+
+  assert(0 == hires.startRecording(Hires::HIRES_VID_480P, 30));
+  hires.recordingAutoStop(); // 1-second loop like RTI, checking for enough frames acquired
   
   sleep(1);
   struct timeval tv;

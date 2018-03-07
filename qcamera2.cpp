@@ -489,8 +489,8 @@ int QCamera2::takePicture()
 {
     int rc = 0;
     dev_->ops->enable_msg_type(dev_, CAMERA_MSG_COMPRESSED_IMAGE);
-    dev_->ops->enable_msg_type(dev_, CAMERA_MSG_RAW_IMAGE);
-    dev_->ops->enable_msg_type(dev_, CAMERA_MSG_RAW_IMAGE_NOTIFY);
+    //dev_->ops->enable_msg_type(dev_, CAMERA_MSG_RAW_IMAGE);
+    //dev_->ops->enable_msg_type(dev_, CAMERA_MSG_RAW_IMAGE_NOTIFY);
     rc = dev_->ops->take_picture(dev_);
     return rc;
 }

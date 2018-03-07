@@ -26,7 +26,8 @@ Hires::Hires(bool save) :
   m_frameStopRecording(-1),
   m_imageMode(HIRES_IMAGE_MODE_MAX),
   m_videoMode(HIRES_VIDEO_MODE_MAX),
-  m_encoder()
+  m_encoder(),
+  m_imageEncoder()
 {
   struct timeval tv;
   gettimeofday(&tv,NULL);
@@ -220,8 +221,10 @@ int Hires::startRecording(HiresVideoMode mode,
   DEBUG_PRINT(HIRES_PCOLOR "\nHires startRecording called at time %f, mode %d\n" KNRM,
               tv.tv_sec + tv.tv_usec / 1000000.0, mode);
 
-  if ((mode == HIRES_VID_MAX_HDR) ||
-      (mode == HIRES_VID_1080P_HDR)) {
+  if ((mode == HIRES_VID_MAX_HDR)   ||
+      (mode == HIRES_VID_1080P_HDR) ||
+      (mode == HIRES_VID_720P_HDR)  ||
+      (mode == HIRES_VID_480P_HDR)) {
     m_params.set("scene-mode", "hdr");
     m_params.set("hdr-need-1x", "true");
     //m_params.set("zsl", "on");
@@ -241,6 +244,14 @@ int Hires::startRecording(HiresVideoMode mode,
     case HIRES_VID_1080P:
     case HIRES_VID_1080P_HDR:
       imageSize = camera::ImageSize(1920, 1080);
+      break;
+    case HIRES_VID_720P:
+    case HIRES_VID_720P_HDR:
+      imageSize = camera::ImageSize(1280, 720);
+      break;
+    case HIRES_VID_480P:
+    case HIRES_VID_480P_HDR:
+      imageSize = camera::ImageSize(640, 480);
       break;
     default:
       DEBUG_PRINT(KRED "\nHires startRecording called with invalid mode\n" KNRM);
@@ -358,6 +369,18 @@ void Hires::onVideoFrame(camera::ICameraFrame *frame) {
         break;
       case HIRES_VID_1080P_HDR:
         fileName = "HIRES_VID_1080P_HDR";
+        break;
+      case HIRES_VID_720P:
+        fileName = "HIRES_VID_720P";
+        break;
+      case HIRES_VID_720P_HDR:
+        fileName = "HIRES_VID_720P_HDR";
+        break;
+      case HIRES_VID_480P:
+        fileName = "HIRES_VID_480P";
+        break;
+      case HIRES_VID_480P_HDR:
+        fileName = "HIRES_VID_480P_HDR";
         break;
       default:
         DEBUG_PRINT(KRED "\nHires invalid video mode in onVideoFrame\n" KNRM);

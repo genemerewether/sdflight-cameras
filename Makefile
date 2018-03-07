@@ -1,8 +1,8 @@
-SRC = Hires Optic Encoder
+SRC = Hires Optic Encoder ImageEncoder
 
 BIN = main_loop main_hires main_optic main_optic_nostop main_simul_gbl
 
-DEPS = Debug.hpp EncoderConfig.hpp
+DEPS = Debug.hpp EncoderConfig.hpp ImageEncoderConfig.hpp
 HDR = $(foreach name,$(SRC),$(name).hpp) $(DEPS)
 OBJ = $(foreach name,$(sort $(SRC) $(BIN)),$(name).o)
 SLIB = $(foreach name,$(SRC),lib$(name).a)
@@ -20,7 +20,7 @@ CXXFLAGS = -I. -g \
 	-std=c++03 # \
 	#-std=gnu++0x
 
-LIBS = -lpthread -ldl -lOmxVenc -lOmxCore -lglib-2.0 -lcutils -llog #-lqcamera2 -lhardware -lqcam -lmmcamera_interface # not needed -lm -lrt -lutil
+LIBS = -lpthread -ldl -lOmxVenc -lOmxCore -lglib-2.0 -lcutils -llog -lqomx_core # -lmmjpeg_interface -lqcamera2 -lhardware -lqcam -lmmcamera_interface # not needed -lm -lrt -lutil
 
 all: $(BIN)
 
@@ -36,7 +36,7 @@ ifneq (,$(filter $(uname_m),x86_64 x86)) # cross-compiling
 				-I$(HEXAGON_ARM_SYSROOT)/usr/include/omx \
 				-I$(HEXAGON_ARM_SYSROOT)/usr/include/ \
 				-D__GLIBC_HAVE_LONG_LONG
-	LIBS := -L $(HEXAGON_ARM_SYSROOT)/usr/lib/ $(LIBS) $(HEXAGON_ARM_SYSROOT)/lib/libstdc++.so.6 $(HEXAGON_ARM_SYSROOT)/usr/lib/libcamparams.so.0 
+	LIBS := -L $(HEXAGON_ARM_SYSROOT)/usr/lib/ $(LIBS) $(HEXAGON_ARM_SYSROOT)/lib/libstdc++.so.6 $(HEXAGON_ARM_SYSROOT)/usr/lib/libcamparams.so.0
 
 test_mai%: mai%
 	adb push $< $(PUSHDIR)$<
@@ -130,6 +130,9 @@ load_qcam: qcam
 
 %.o: %.cpp %.hpp $(DEPS)
 	$(CXX) -c -o $@ $< $(CXXFLAGS)
+
+libImageEncoder.a: ImageEncoder.o ImageEncoderConfig.o $(DEPS)
+	$(AR) $(AR_FLAGS) $@ $< ImageEncoderConfig.o
 
 libEncoder.a: Encoder.o EncoderConfig.o $(DEPS)
 	$(AR) $(AR_FLAGS) $@ $< EncoderConfig.o

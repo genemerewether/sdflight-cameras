@@ -11,7 +11,8 @@
 Optic::Optic(bool print) :
   m_print(print),
   m_cameraPtr(NULL),
-  m_params()
+  m_params(),
+  m_imageEncoder()
 {
   struct timeval tv;
   gettimeofday(&tv,NULL);

@@ -6,6 +6,7 @@
 #pragma GCC diagnostic pop
 
 #include "Debug.hpp"
+#include "ImageEncoder.hpp"
 
 #ifndef SDFLIGHT_CAMERAS_OPTIC_HPP
 #define SDFLIGHT_CAMERAS_OPTIC_HPP
@@ -41,6 +42,8 @@ private:
   camera::ICameraDevice* m_cameraPtr;
 
   camera::CameraParams m_params;
+
+  ImageEncoder m_imageEncoder;
 
   pthread_mutex_t m_cameraFrameLock;
 }; // class Optic
