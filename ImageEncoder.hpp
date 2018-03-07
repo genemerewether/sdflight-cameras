@@ -1,9 +1,15 @@
-#include "OMX_Core.h"
-#include "OMX_Component.h"
-
 #include "ImageEncoderConfig.hpp"
 
 #include <pthread.h>
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+#include "mm_jpeg_interface.h"
+#ifdef __cplusplus
+}
+#endif
+//#include "mm_jpeg_ionbuf.h"
 
 #ifndef SDFLIGHT_CAMERAS_IMAGEENCODER_HPP
 #define SDFLIGHT_CAMERAS_IMAGEENCODER_HPP
@@ -11,38 +17,30 @@
 class ImageEncoder
 {
 public:
+  typedef enum {
+    IMGENC_IMG_13MP_RAW,
+    IMGENC_IMG_13MP,
+    IMGENC_IMG_13MP_HDR,
+    IMGENC_IMG_2MP,
+    IMGENC_IMG_2MP_HDR,
+    IMGENC_IMG_VGA,
+    IMGENC_IMG_VGA_HDR,
+    IMGENC_IMAGE_MODE_MAX
+  } ImageEncoderInputType;
+
   ImageEncoder();
 
   ~ImageEncoder();
 
 private:
-  static OMX_ERRORTYPE eventCallback(OMX_IN OMX_HANDLETYPE compHandle,
-                                     OMX_IN OMX_PTR context,
-                                     OMX_IN OMX_EVENTTYPE event,
-                                     OMX_IN OMX_U32 data1,
-                                     OMX_IN OMX_U32 data2,
-                                     OMX_IN OMX_PTR eventData);
+  typedef struct {
+    uint32_t handle;
+    mm_jpeg_ops_t ops;
+    mm_dimension dim;
+  } ImageEncoderInterface;
 
-  static OMX_ERRORTYPE emptyDoneCallback(OMX_IN OMX_HANDLETYPE compHandle,
-                                         OMX_IN OMX_PTR context,
-                                         OMX_IN OMX_BUFFERHEADERTYPE* buffer);
+  ImageEncoderInterface m_inputs[IMGENC_IMAGE_MODE_MAX];
 
-  static OMX_ERRORTYPE fillDoneCallback(OMX_IN OMX_HANDLETYPE compHandle,
-                                        OMX_IN OMX_PTR context,
-                                        OMX_IN OMX_BUFFERHEADERTYPE* buffer);
-  OMX_HANDLETYPE m_omxEncoder;
-
-  OMX_STATETYPE m_omxEncoderState;
-
-  OMX_BUFFERHEADERTYPE** m_omxInputBuffers;
-
-  OMX_BUFFERHEADERTYPE** m_omxOutputBuffers;
-
-  ImageEncoderConfig::ImageEncoderConfigType m_encoderConfig;
-
-  pthread_mutex_t m_omxEncoderStateLock;
-
-  pthread_cond_t m_omxEncoderStateChange;
 }; // class ImageEncoder
 
 #endif // SDFLIGHT_CAMERAS_IMAGEENCODER_HPP

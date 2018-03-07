@@ -129,7 +129,7 @@ int Hires::takePicture(HiresImageMode mode) {
 
   if ((mode == HIRES_IMG_13MP_HDR) ||
       (mode == HIRES_IMG_2MP_HDR) ||
-      (mode == HIRES_IMG_QVGA_HDR)) {
+      (mode == HIRES_IMG_VGA_HDR)) {
     m_params.set("scene-mode", "hdr");
     m_params.set("hdr-need-1x", "true");
     //m_params.set("zsl", "on");
@@ -156,12 +156,12 @@ int Hires::takePicture(HiresImageMode mode) {
     case HIRES_IMG_2MP_HDR:
       imageSize = camera::ImageSize(1920, 1080);
       break;
-    case HIRES_IMG_QVGA:
-    case HIRES_IMG_QVGA_HDR:
-      imageSize = camera::ImageSize(320, 240);
+    case HIRES_IMG_VGA:
+    case HIRES_IMG_VGA_HDR:
+      imageSize = camera::ImageSize(640, 480);
       break;
     default:
-      DEBUG_PRINT(KRED "\nHires takePicture called with invalid mode\n" KNRM);
+      DEBUG_PRINT(KRED "\nHires takePicture called with invalid mode %d\n" KNRM, mode);
       assert(0);
   }
 
@@ -254,7 +254,7 @@ int Hires::startRecording(HiresVideoMode mode,
       imageSize = camera::ImageSize(640, 480);
       break;
     default:
-      DEBUG_PRINT(KRED "\nHires startRecording called with invalid mode\n" KNRM);
+      DEBUG_PRINT(KRED "\nHires startRecording called with invalid mode %d\n" KNRM, mode);
       assert(0);
   }
 
@@ -383,7 +383,7 @@ void Hires::onVideoFrame(camera::ICameraFrame *frame) {
         fileName = "HIRES_VID_480P_HDR";
         break;
       default:
-        DEBUG_PRINT(KRED "\nHires invalid video mode in onVideoFrame\n" KNRM);
+        DEBUG_PRINT(KRED "\nHires invalid video mode %d in onVideoFrame\n" KNRM, m_videoMode);
         fileName = "HIRES_VID_UNKNOWN";
     }
     int fid = open(fileName,
@@ -429,14 +429,14 @@ void Hires::onPictureFrame(camera::ICameraFrame *frame) {
       case HIRES_IMG_2MP_HDR:
         fileName = "HIRES_IMG_2MP_HDR";
         break;
-      case HIRES_IMG_QVGA:
-        fileName = "HIRES_IMG_QVGA";
+      case HIRES_IMG_VGA:
+        fileName = "HIRES_IMG_VGA";
         break;
-      case HIRES_IMG_QVGA_HDR:
-        fileName = "HIRES_IMG_QVGA_HDR";
+      case HIRES_IMG_VGA_HDR:
+        fileName = "HIRES_IMG_VGA_HDR";
         break;
       default:
-        DEBUG_PRINT(KRED "\nHires invalid image mode in onPictureFrame\n" KNRM);
+        DEBUG_PRINT(KRED "\nHires invalid image mode %d in onPictureFrame\n" KNRM, m_imageMode);
         fileName = "HIRES_IMG_UNKNOWN";
     }
     int fid = open(fileName,

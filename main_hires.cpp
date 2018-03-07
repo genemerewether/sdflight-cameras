@@ -36,9 +36,9 @@ int main(int argc, char *argv[]) {
   stat = hires.takePicture(Hires::HIRES_IMG_2MP_HDR);
   assert(stat == 0);
   
-  stat = hires.takePicture(Hires::HIRES_IMG_QVGA);
+  stat = hires.takePicture(Hires::HIRES_IMG_VGA);
   assert(stat == 0);
-  stat = hires.takePicture(Hires::HIRES_IMG_QVGA_HDR);
+  stat = hires.takePicture(Hires::HIRES_IMG_VGA_HDR);
   assert(stat == 0);
   
   gettimeofday(&tv,NULL);
