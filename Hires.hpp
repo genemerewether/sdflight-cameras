@@ -6,7 +6,6 @@
 #pragma GCC diagnostic pop
 
 #include "Debug.hpp"
-#include "ImageEncoder.hpp"
 #include "Encoder.hpp"
 
 #ifndef SDFLIGHT_CAMERAS_HIRES_HPP
@@ -95,8 +94,6 @@ private:
   HiresVideoMode m_videoMode;
 
   Encoder m_encoder;
-
-  //ImageEncoder m_imageEncoder;
 
   pthread_mutex_t m_cameraFrameLock;
 

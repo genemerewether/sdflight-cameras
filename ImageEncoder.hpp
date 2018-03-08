@@ -6,10 +6,10 @@
 extern "C" {
 #endif
 #include "mm_jpeg_interface.h"
+#include "mm_jpeg_ionbuf.h"
 #ifdef __cplusplus
 }
 #endif
-//#include "mm_jpeg_ionbuf.h"
 
 #ifndef SDFLIGHT_CAMERAS_IMAGEENCODER_HPP
 #define SDFLIGHT_CAMERAS_IMAGEENCODER_HPP
@@ -18,13 +18,9 @@ class ImageEncoder
 {
 public:
   typedef enum {
-    IMGENC_IMG_13MP_RAW,
     IMGENC_IMG_13MP,
-    IMGENC_IMG_13MP_HDR,
     IMGENC_IMG_2MP,
-    IMGENC_IMG_2MP_HDR,
     IMGENC_IMG_VGA,
-    IMGENC_IMG_VGA_HDR,
     IMGENC_IMAGE_MODE_MAX
   } ImageEncoderInputType;
 
@@ -36,7 +32,11 @@ private:
   typedef struct {
     uint32_t handle;
     mm_jpeg_ops_t ops;
+    mm_jpeg_job_t job;
+    mm_jpeg_encode_params_t params;
     mm_dimension dim;
+    buffer_t input;
+    buffer_t output;
   } ImageEncoderInterface;
 
   ImageEncoderInterface m_inputs[IMGENC_IMAGE_MODE_MAX];

@@ -1,6 +1,7 @@
 #include "Hires.hpp"
 #include "Optic.hpp"
 #include "Debug.hpp"
+#include "ImageEncoder.hpp"
 #include <pthread.h>
 #include <stdio.h>
 #include <assert.h>
@@ -12,6 +13,7 @@
 
 Hires hires;
 Optic optic;
+ImageEncoder imageEnc;
 
 int main(int argc, char *argv[]) {
   struct timeval tv;
