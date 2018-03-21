@@ -28,6 +28,19 @@ public:
 
   ~ImageEncoder();
 
+  buffer_t* getPictureInBuffer(ImageEncoderInputType type);
+
+  void innerCallback(ImageEncoderInputType type,
+                     mm_jpeg_output_t* jpgOut);
+
+  void setEncodeCallback(ImageEncoderInputType type);
+
+  static void imageEncCallback(jpeg_job_status_t status,
+                               uint32_t client_hdl,
+                               uint32_t jobId,
+                               mm_jpeg_output_t *p_output,
+                               void *userData);
+
 private:
   typedef struct {
     uint32_t handle;
@@ -37,6 +50,8 @@ private:
     mm_dimension dim;
     buffer_t input;
     buffer_t output;
+    ImageEncoderInputType imageEncInputType;
+    ImageEncoder* imageEncPtr;
   } ImageEncoderInterface;
 
   ImageEncoderInterface m_inputs[IMGENC_IMAGE_MODE_MAX];

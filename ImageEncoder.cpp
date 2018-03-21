@@ -19,6 +19,8 @@ ImageEncoder::ImageEncoder()
               tv.tv_sec + tv.tv_usec / 1000000.0);
 
   for (int i = 0; i < IMGENC_IMAGE_MODE_MAX; i++) {
+    m_inputs[i].imageEncPtr = this;
+
     switch (i) {
       case IMGENC_IMG_13MP:
         m_inputs[i].dim.w = 4208;
@@ -48,7 +50,7 @@ ImageEncoder::ImageEncoder()
     assert(m_inputs[i].output.addr);
 
     /* set encode parameters */
-    m_inputs[i].params.jpeg_cb = NULL; //mm_jpeg_encode_callback;
+    m_inputs[i].params.jpeg_cb = imageEncCallback;
     m_inputs[i].params.userdata = &m_inputs[i];
     m_inputs[i].params.color_format = MM_JPEG_COLOR_FORMAT_YCRCBLP_H2V2;
     m_inputs[i].params.thumb_color_format = MM_JPEG_COLOR_FORMAT_YCRCBLP_H2V2;
@@ -131,4 +133,39 @@ ImageEncoder::~ImageEncoder()
     free(m_inputs[i].output.addr);
     m_inputs[i].output.addr = NULL;
   }
+}
+
+buffer_t* ImageEncoder::getPictureInBuffer(ImageEncoderInputType type)
+{
+  return &m_inputs[type].input;
+}
+
+void ImageEncoder::innerCallback(ImageEncoderInputType type,
+                                 mm_jpeg_output_t* jpgOut)
+{
+  assert(jpgOut);
+  struct timeval tv;
+  gettimeofday(&tv,NULL);
+  DEBUG_PRINT(ENCODER_PCOLOR "\nImageEncoder innerCallback type %d, size %d at time %f\n" KNRM,
+              (int) type, jpgOut->buf_filled_len,
+              tv.tv_sec + tv.tv_usec / 1000000.0);
+}
+
+void ImageEncoder::setEncodeCallback(ImageEncoderInputType type)
+{
+}
+
+void ImageEncoder::imageEncCallback(jpeg_job_status_t status,
+                                    uint32_t client_hdl,
+                                    uint32_t jobId,
+                                    mm_jpeg_output_t *p_output,
+                                    void *userData)
+{
+  assert(userData);
+  ImageEncoderInterface* imageEncIntf = (ImageEncoderInterface*) userData;
+  ImageEncoder* comp = (ImageEncoder*) imageEncIntf->imageEncPtr;
+  assert(comp);
+  // TODO(mereweth) - assert the function pointer
+  comp->innerCallback(imageEncIntf->imageEncInputType,
+                      p_output);
 }

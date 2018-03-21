@@ -12,7 +12,7 @@
 #define MAIN_PCOLOR KGRN
 
 Hires hires;
-Optic optic;
+Optic optic(false); // don't print
 ImageEncoder imageEnc;
 
 int main(int argc, char *argv[]) {
@@ -24,7 +24,8 @@ int main(int argc, char *argv[]) {
   gettimeofday(&tv,NULL);
   DEBUG_PRINT(MAIN_PCOLOR "\ntaking hires picture at %f\n" KNRM,
               tv.tv_sec + tv.tv_usec / 1000000.0);
-  stat = hires.takePicture();
+  hires.setPictureOutBuffer(imageEnc.getPictureInBuffer(ImageEncoder::);
+  stat = hires.takePicture(Hires::HIRES_IMG_13MP);
   if (stat) {
     gettimeofday(&tv,NULL);
     DEBUG_PRINT(KRED "\nhires takePicture failed with value %d at %f\n" KNRM,

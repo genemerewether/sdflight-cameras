@@ -5,6 +5,14 @@
 #include "camera_parameters.h"
 #pragma GCC diagnostic pop
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+#include "mm_jpeg_ionbuf.h"
+#ifdef __cplusplus
+}
+#endif
+
 #include "Debug.hpp"
 #include "Encoder.hpp"
 
@@ -44,6 +52,8 @@ public:
   void flowAutoStop();
 
   void recordingAutoStop();
+
+  void setPictureOutBuffer(buffer_t* outBuffer);
 
   int takePicture(HiresImageMode mode = HIRES_IMG_13MP);
 
@@ -92,6 +102,8 @@ private:
   HiresImageMode m_imageMode;
 
   HiresVideoMode m_videoMode;
+
+  buffer_t* m_pictureOutBuffer;
 
   Encoder m_encoder;
 

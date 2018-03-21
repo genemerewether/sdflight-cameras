@@ -6,6 +6,7 @@
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <string.h>
 #include <fcntl.h>
 #include <errno.h>
 
@@ -26,6 +27,7 @@ Hires::Hires(bool save) :
   m_frameStopRecording(-1),
   m_imageMode(HIRES_IMAGE_MODE_MAX),
   m_videoMode(HIRES_VIDEO_MODE_MAX),
+  m_pictureOutBuffer(NULL),
   m_encoder()
 {
   struct timeval tv;
@@ -110,6 +112,12 @@ void Hires::recordingAutoStop() {
     }
     sleep(1);
   }
+}
+
+void Hires::setPictureOutBuffer(buffer_t* outBuffer) {
+  assert(0 == pthread_mutex_lock(&m_cameraFrameLock));
+  m_pictureOutBuffer = outBuffer;
+  assert(0 == pthread_mutex_unlock(&m_cameraFrameLock));
 }
 
 int Hires::takePicture(HiresImageMode mode) {
@@ -448,7 +456,20 @@ void Hires::onPictureFrame(camera::ICameraFrame *frame) {
     assert(close(fid) != -1);
   }
 
+  // TODO(merewet) - use a second lock?
   assert(0 == pthread_mutex_lock(&m_cameraFrameLock));
+
+  if (m_pictureOutBuffer == NULL) {
+    DEBUG_PRINT(HIRES_PCOLOR "\nHires picture out buffer NULL in onPictureFrame\n" KNRM);
+  }
+  else {
+    if (m_pictureOutBuffer->addr == NULL) {
+      DEBUG_PRINT(KRED "\nHires picture out buffer addr NULL in onPictureFrame\n" KNRM);
+      assert(0);
+    }
+    (void) memcpy((void*) m_pictureOutBuffer->addr, frame->data, frame->size);
+    m_pictureOutBuffer->size = frame->size;
+  }
 
   m_pictureReady = true;
 
