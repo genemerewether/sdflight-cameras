@@ -30,10 +30,15 @@ public:
 
   buffer_t* getPictureInBuffer(ImageEncoderInputType type);
 
+  int startJob(ImageEncoderInputType type);
+
+  int writeBuffer(ImageEncoderInputType type,
+                  const char* const fileName);
+
+  int waitJob(unsigned int seconds);
+
   void innerCallback(ImageEncoderInputType type,
                      mm_jpeg_output_t* jpgOut);
-
-  void setEncodeCallback(ImageEncoderInputType type);
 
   static void imageEncCallback(jpeg_job_status_t status,
                                uint32_t client_hdl,
@@ -46,6 +51,7 @@ private:
     uint32_t handle;
     mm_jpeg_ops_t ops;
     mm_jpeg_job_t job;
+    uint32_t jobID; // TODO(mereweth) - how many job IDs?
     mm_jpeg_encode_params_t params;
     mm_dimension dim;
     buffer_t input;
@@ -55,6 +61,14 @@ private:
   } ImageEncoderInterface;
 
   ImageEncoderInterface m_inputs[IMGENC_IMAGE_MODE_MAX];
+
+  bool m_jobRunning;
+
+  bool m_frameReady;
+
+  pthread_mutex_t m_encoderFrameLock;
+
+  pthread_cond_t m_encoderFrameReady;
 
 }; // class ImageEncoder
 

@@ -1,8 +1,9 @@
 #include "ImageEncoder.hpp"
+#include "Debug.hpp"
+
 #include <assert.h>
 #include <sys/time.h>
 #include <time.h>
-#include "Debug.hpp"
 #include <stdlib.h>
 
 //#include <media/hardware/HardwareAPI.h>
@@ -11,12 +12,19 @@
 
 #define ENCODER_PCOLOR KCYN
 
-ImageEncoder::ImageEncoder()
+ImageEncoder::ImageEncoder() :
+  m_inputs(),
+  m_jobRunning(false),
+  m_frameReady(false)
 {
   struct timeval tv;
   gettimeofday(&tv,NULL);
   DEBUG_PRINT(ENCODER_PCOLOR "\nImageEncoder constructor at time %f\n" KNRM,
               tv.tv_sec + tv.tv_usec / 1000000.0);
+
+  assert(0 == pthread_mutex_init(&m_encoderFrameLock, 0));
+
+  assert(0 == pthread_cond_init(&m_encoderFrameReady, 0));
 
   for (int i = 0; i < IMGENC_IMAGE_MODE_MAX; i++) {
     m_inputs[i].imageEncPtr = this;
@@ -114,6 +122,8 @@ ImageEncoder::ImageEncoder()
     m_inputs[i].ops.create_session(m_inputs[i].handle, &m_inputs[i].params,
                                    &m_inputs[i].job.encode_job.session_id);
     assert(m_inputs[i].job.encode_job.session_id);
+
+    m_inputs[i].job.job_type = JPEG_JOB_TYPE_ENCODE;
   }
 }
 
@@ -132,6 +142,9 @@ ImageEncoder::~ImageEncoder()
     assert(m_inputs[i].output.addr);
     free(m_inputs[i].output.addr);
     m_inputs[i].output.addr = NULL;
+
+    m_inputs[i].ops.destroy_session(m_inputs[i].job.encode_job.session_id);
+    m_inputs[i].ops.close(m_inputs[i].handle);
   }
 }
 
@@ -140,19 +153,106 @@ buffer_t* ImageEncoder::getPictureInBuffer(ImageEncoderInputType type)
   return &m_inputs[type].input;
 }
 
+int ImageEncoder::startJob(ImageEncoderInputType type)
+{
+  if (m_jobRunning) {
+    return -1;
+  }
+  /* NOTE(mereweth) - could make this an array to allow simultaneous jobs
+   * of different types
+   */
+  m_frameReady = false;
+  // TODO(mereweth) - how many job IDs?
+  int stat = m_inputs[type].ops.start_job(&m_inputs[type].job,
+                                          &m_inputs[type].jobID);
+  if (!stat) {
+    m_jobRunning = true;
+  }
+
+  return stat;
+}
+
+int ImageEncoder::writeBuffer(ImageEncoderInputType type,
+                              const char* const fileName)
+{
+  int fid = open(fileName,
+                 O_CREAT | O_WRONLY | O_APPEND,
+                 S_IRUSR | S_IWUSR |  S_IRGRP | S_IWGRP);
+  if (fid == -1) {
+    DEBUG_PRINT(KRED "ImageEncoder failed to open %s\n" KNRM, fileName);
+    return errno;
+  }
+
+  int stat = write(fid,
+                   m_inputs[type].output.addr,
+                   m_inputs[type].output.size);
+  if (stat == -1) {
+    DEBUG_PRINT(KRED "ImageEncoder failed to write %s, fid %d, bytes %d\n" KNRM,
+                fileName, fid, m_inputs[type].output.size);
+    (void) close(fid);
+    return errno;
+  }
+  DEBUG_PRINT(ENCODER_PCOLOR "ImageEncoder wrote %s, fid %d, bytes %d\n" KNRM,
+              fileName, fid, m_inputs[type].output.size);
+
+  stat = close(fid);
+  if (stat == -1) {
+    DEBUG_PRINT(KRED "ImageEncoder failed to close %s, fid %d\n" KNRM,
+                fileName, fid);
+    return errno;
+  }
+
+  return 0;
+}
+
+int ImageEncoder::waitJob(unsigned int seconds)
+{
+  assert(0 == pthread_mutex_lock(&m_encoderFrameLock));
+
+  struct timeval now;
+  gettimeofday(&now,NULL);
+  struct timespec wait;
+  wait.tv_sec = seconds + now.tv_sec;
+  wait.tv_nsec = now.tv_usec * 1000;
+
+  int stat = 0;
+  while (!m_frameReady && stat == 0) {
+    stat = pthread_cond_timedwait(&m_encoderFrameReady, &m_encoderFrameLock,
+				  &wait);
+  }
+  if (stat == ETIMEDOUT) {
+    DEBUG_PRINT(KRED "ImageEncoder timed out in waitJob\n" KNRM);
+  }
+
+  assert(0 == pthread_mutex_unlock(&m_encoderFrameLock));
+
+  return stat;
+}
+
 void ImageEncoder::innerCallback(ImageEncoderInputType type,
                                  mm_jpeg_output_t* jpgOut)
 {
-  assert(jpgOut);
   struct timeval tv;
   gettimeofday(&tv,NULL);
-  DEBUG_PRINT(ENCODER_PCOLOR "\nImageEncoder innerCallback type %d, size %d at time %f\n" KNRM,
-              (int) type, jpgOut->buf_filled_len,
-              tv.tv_sec + tv.tv_usec / 1000000.0);
-}
+  if (jpgOut) {
+    DEBUG_PRINT(ENCODER_PCOLOR "\nImageEncoder innerCallback type %d, size %d at time %f\n" KNRM,
+                (int) type, jpgOut->buf_filled_len,
+                tv.tv_sec + tv.tv_usec / 1000000.0);
+  }
+  else {
+    DEBUG_PRINT(KRED "\nImageEncoder empty innerCallback type %d at time %f\n" KNRM,
+                (int) type, tv.tv_sec + tv.tv_usec / 1000000.0);
+  }
 
-void ImageEncoder::setEncodeCallback(ImageEncoderInputType type)
-{
+  m_jobRunning = false;
+  
+  assert(0 == pthread_mutex_lock(&m_encoderFrameLock));
+
+  m_frameReady = true;
+
+  assert(0 == pthread_cond_signal(&m_encoderFrameReady));
+
+  assert(0 == pthread_mutex_unlock(&m_encoderFrameLock));
 }
 
 void ImageEncoder::imageEncCallback(jpeg_job_status_t status,

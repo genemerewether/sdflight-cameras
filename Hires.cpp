@@ -301,8 +301,20 @@ int Hires::startRecording(HiresVideoMode mode,
     return stat;
   }
 
-  while (!m_videoReady) {
-    assert(0 == pthread_cond_wait(&m_cameraFrameReady, &m_cameraFrameLock));
+  struct timeval now;
+  gettimeofday(&now,NULL);
+  struct timespec wait;
+  wait.tv_sec = static_cast<unsigned int>(HIRES_IMG_WAIT_SEC) +
+    now.tv_sec;
+  wait.tv_nsec = now.tv_usec * 1000;
+
+  stat = 0;
+  while (!m_videoReady && stat == 0) {
+    stat = pthread_cond_timedwait(&m_cameraFrameReady, &m_cameraFrameLock,
+                                  &wait);
+  }
+  if (stat == ETIMEDOUT) {
+    DEBUG_PRINT(KRED "Hires timed out in startRecording\n" KNRM);
   }
 
   assert(0 == pthread_mutex_unlock(&m_cameraFrameLock));
@@ -467,8 +479,13 @@ void Hires::onPictureFrame(camera::ICameraFrame *frame) {
       DEBUG_PRINT(KRED "\nHires picture out buffer addr NULL in onPictureFrame\n" KNRM);
       assert(0);
     }
-    (void) memcpy((void*) m_pictureOutBuffer->addr, frame->data, frame->size);
-    m_pictureOutBuffer->size = frame->size;
+    int size = frame->size;
+    if (m_pictureOutBuffer->size < size) {
+      DEBUG_PRINT(KRED "\nHires picture out buffer too small, %d vs %d, in onPictureFrame\n" KNRM,
+                  m_pictureOutBuffer->size, size);
+      size = m_pictureOutBuffer->size;
+    }
+    (void) memcpy((void*) m_pictureOutBuffer->addr, frame->data, size);
   }
 
   m_pictureReady = true;
