@@ -1,5 +1,7 @@
 #include "Hires.hpp"
 #include "Debug.hpp"
+#include "ImageEncoder.hpp"
+
 #include <pthread.h>
 #include <stdio.h>
 #include <assert.h>
@@ -9,7 +11,8 @@
 
 #define MAIN_PCOLOR KGRN
 
-Hires hires(true);
+Hires hires(true); // save images and video
+ImageEncoder imageEnc;
 
 int main(int argc, char *argv[]) {
   assert(0 == hires.startRecording(Hires::HIRES_VID_4K, 10));
@@ -30,32 +33,49 @@ int main(int argc, char *argv[]) {
   gettimeofday(&tv,NULL);
   DEBUG_PRINT(MAIN_PCOLOR "\nmain_hires; taking hires pictures at %f\n" KNRM,
               tv.tv_sec + tv.tv_usec / 1000000.0);
+
+  hires.setPictureOutBuffer(imageEnc.getPictureInBuffer(ImageEncoder::IMGENC_IMG_2MP));
+  assert(0 == hires.takePicture(Hires::HIRES_IMG_2MP));
+  assert(0 == imageEnc.startJob(ImageEncoder::IMGENC_IMG_2MP));
+  assert(0 == imageEnc.waitJob(2));
+  assert(0 == imageEnc.writeBuffer(ImageEncoder::IMGENC_IMG_2MP,
+    "MAIN_HIRES_IMGENC_HIRES_IMG_2MP"));
+
+  assert(0 == hires.takePicture(Hires::HIRES_IMG_2MP_HDR));
+  assert(0 == imageEnc.startJob(ImageEncoder::IMGENC_IMG_2MP));
+  assert(0 == imageEnc.waitJob(2));
+  assert(0 == imageEnc.writeBuffer(ImageEncoder::IMGENC_IMG_2MP,
+    "MAIN_HIRES_IMGENC_HIRES_IMG_2MP_HDR"));
+
+  hires.setPictureOutBuffer(NULL);
   
-  stat = hires.takePicture(Hires::HIRES_IMG_2MP);
-  assert(stat == 0);
-  stat = hires.takePicture(Hires::HIRES_IMG_2MP_HDR);
-  assert(stat == 0);
-  
-  stat = hires.takePicture(Hires::HIRES_IMG_VGA);
-  assert(stat == 0);
-  stat = hires.takePicture(Hires::HIRES_IMG_VGA_HDR);
-  assert(stat == 0);
+  assert(0 == hires.takePicture(Hires::HIRES_IMG_VGA));
+  assert(0 == hires.takePicture(Hires::HIRES_IMG_VGA_HDR));
   
   gettimeofday(&tv,NULL);
   DEBUG_PRINT(MAIN_PCOLOR "\nmain_hires; taking hires 13MP pictures at %f\n" KNRM,
               tv.tv_sec + tv.tv_usec / 1000000.0);
   
-  stat = hires.takePicture(Hires::HIRES_IMG_13MP);
-  assert(stat == 0);
-  stat = hires.takePicture(Hires::HIRES_IMG_13MP_HDR);
-  assert(stat == 0);
+  hires.setPictureOutBuffer(imageEnc.getPictureInBuffer(ImageEncoder::IMGENC_IMG_13MP));
+  assert(0 == hires.takePicture(Hires::HIRES_IMG_13MP));
+  assert(0 == imageEnc.startJob(ImageEncoder::IMGENC_IMG_13MP));
+  assert(0 == imageEnc.waitJob(2));
+  assert(0 == imageEnc.writeBuffer(ImageEncoder::IMGENC_IMG_13MP,
+    "MAIN_HIRES_IMGENC_HIRES_IMG_13MP"));
+
+  assert(0 == hires.takePicture(Hires::HIRES_IMG_13MP_HDR));
+  assert(0 == imageEnc.startJob(ImageEncoder::IMGENC_IMG_13MP));
+  assert(0 == imageEnc.waitJob(2));
+  assert(0 == imageEnc.writeBuffer(ImageEncoder::IMGENC_IMG_13MP,
+    "MAIN_HIRES_IMGENC_HIRES_IMG_13MP_HDR"));
+
+  hires.setPictureOutBuffer(NULL);
   
   gettimeofday(&tv,NULL);
   DEBUG_PRINT(MAIN_PCOLOR "\nmain_hires; taking hires raw picture at %f\n" KNRM,
               tv.tv_sec + tv.tv_usec / 1000000.0);
   
-  stat = hires.takePicture(Hires::HIRES_IMG_13MP_RAW);
-  assert(stat == 0);
+  assert(0 == hires.takePicture(Hires::HIRES_IMG_13MP_RAW));
   
   return 0;
 }

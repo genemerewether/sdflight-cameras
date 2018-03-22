@@ -39,7 +39,7 @@ ifneq (,$(filter $(uname_m),x86_64 x86)) # cross-compiling
 				-I$(HEXAGON_ARM_SYSROOT)/usr/include/linux-headers/usr/include/
 	LIBS := -L $(HEXAGON_ARM_SYSROOT)/usr/lib/ $(LIBS) $(HEXAGON_ARM_SYSROOT)/lib/libstdc++.so.6 $(HEXAGON_ARM_SYSROOT)/usr/lib/libcamparams.so.0
 
-test_mai%: mai%
+test_%: %
 	adb push $< $(PUSHDIR)$<
 	adb shell 'mkdir -p /home/linaro/tmp && cd /home/linaro/tmp && $(PUSHDIR)$<'
 
@@ -73,7 +73,7 @@ LIBS := $(LIBS) /usr/lib/libcamparams.so.0 # missing symlink /usr/lib/libcampara
 test: all
 	$(foreach file,$(BIN),./$(file))
 
-test_mai%: mai%
+test_%: %
 	$<
 
 endif # cross-compiling? or native?
@@ -128,6 +128,9 @@ qcam: libqcamera2.a libqcamera2.so libcamera.a
 
 load_qcam: qcam
 	adb push libqcamera2.so /usr/lib/libqcamera2.so.0.0.0
+
+qc_test/mm_jpeg_test: qc_test/mm_jpeg_test.c
+	$(CXX) $(CXXFLAGS) $(EXTRA) $< -o $@ -Wl,--start-group $(LIBS) -Wl,--end-group
 
 %.o: %.cpp %.hpp $(DEPS)
 	$(CXX) -c -o $@ $< $(CXXFLAGS)

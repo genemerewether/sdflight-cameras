@@ -27,8 +27,8 @@ Hires::Hires(bool save) :
   m_frameStopRecording(-1),
   m_imageMode(HIRES_IMAGE_MODE_MAX),
   m_videoMode(HIRES_VIDEO_MODE_MAX),
-  m_pictureOutBuffer(NULL),
-  m_encoder()
+  m_pictureOutBuffer(NULL)/*,
+  m_encoder()*/
 {
   struct timeval tv;
   gettimeofday(&tv,NULL);

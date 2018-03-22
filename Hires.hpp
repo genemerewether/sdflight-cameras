@@ -105,7 +105,7 @@ private:
 
   buffer_t* m_pictureOutBuffer;
 
-  Encoder m_encoder;
+  /*Encoder m_encoder;*/
 
   pthread_mutex_t m_cameraFrameLock;
 

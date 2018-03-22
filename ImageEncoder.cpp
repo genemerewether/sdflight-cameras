@@ -176,7 +176,7 @@ int ImageEncoder::writeBuffer(ImageEncoderInputType type,
                               const char* const fileName)
 {
   int fid = open(fileName,
-                 O_CREAT | O_WRONLY | O_APPEND,
+                 O_CREAT | O_WRONLY | O_TRUNC,
                  S_IRUSR | S_IWUSR |  S_IRGRP | S_IWGRP);
   if (fid == -1) {
     DEBUG_PRINT(KRED "ImageEncoder failed to open %s\n" KNRM, fileName);
