@@ -5,8 +5,15 @@
 #include "camera_parameters.h"
 #pragma GCC diagnostic pop
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+#include "mm_jpeg_ionbuf.h"
+#ifdef __cplusplus
+}
+#endif
+
 #include "Debug.hpp"
-#include "ImageEncoder.hpp"
 #include "Encoder.hpp"
 
 #ifndef SDFLIGHT_CAMERAS_HIRES_HPP
@@ -21,8 +28,8 @@ public:
     HIRES_IMG_13MP_HDR,
     HIRES_IMG_2MP,
     HIRES_IMG_2MP_HDR,
-    HIRES_IMG_QVGA,
-    HIRES_IMG_QVGA_HDR,
+    HIRES_IMG_VGA,
+    HIRES_IMG_VGA_HDR,
     HIRES_IMAGE_MODE_MAX
   } HiresImageMode;
 
@@ -45,6 +52,8 @@ public:
   void flowAutoStop();
 
   void recordingAutoStop();
+
+  void setPictureOutBuffer(buffer_t* outBuffer);
 
   int takePicture(HiresImageMode mode = HIRES_IMG_13MP);
 
@@ -94,9 +103,9 @@ private:
 
   HiresVideoMode m_videoMode;
 
-  Encoder m_encoder;
+  buffer_t* m_pictureOutBuffer;
 
-  //ImageEncoder m_imageEncoder;
+  /*Encoder m_encoder;*/
 
   pthread_mutex_t m_cameraFrameLock;
 

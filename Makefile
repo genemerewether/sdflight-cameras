@@ -1,4 +1,4 @@
-SRC = Hires Optic Encoder ImageEncoder
+SRC = Hires Optic Encoder ImageEncoder ImageEncoderConfig
 
 BIN = main_loop main_hires main_optic main_optic_nostop main_simul_gbl
 
@@ -20,7 +20,7 @@ CXXFLAGS = -I. -g \
 	-std=c++03 # \
 	#-std=gnu++0x
 
-LIBS = -lpthread -ldl -lOmxVenc -lOmxCore -lglib-2.0 -lcutils -llog -lqomx_core # -lmmjpeg_interface -lqcamera2 -lhardware -lqcam -lmmcamera_interface # not needed -lm -lrt -lutil
+LIBS = -lpthread -ldl -lOmxVenc -lOmxCore -lglib-2.0 -lcutils -llog -lqomx_core # -lmmjpeg_interface # -lqcamera2 -lhardware -lqcam -lmmcamera_interface # not needed -lm -lrt -lutil
 
 all: $(BIN)
 
@@ -35,10 +35,11 @@ ifneq (,$(filter $(uname_m),x86_64 x86)) # cross-compiling
 				-I$(HEXAGON_SDK_ROOT)/gcc-linaro-4.9-2014.11-x86_64_arm-linux-gnueabihf_linux/arm-linux-gnueabihf/include/c++/4.9.3/ \
 				-I$(HEXAGON_ARM_SYSROOT)/usr/include/omx \
 				-I$(HEXAGON_ARM_SYSROOT)/usr/include/ \
-				-D__GLIBC_HAVE_LONG_LONG
+				-I$(HEXAGON_ARM_SYSROOT)/usr/include/mm_camera_interface \
+				-I$(HEXAGON_ARM_SYSROOT)/usr/include/linux-headers/usr/include/
 	LIBS := -L $(HEXAGON_ARM_SYSROOT)/usr/lib/ $(LIBS) $(HEXAGON_ARM_SYSROOT)/lib/libstdc++.so.6 $(HEXAGON_ARM_SYSROOT)/usr/lib/libcamparams.so.0
 
-test_mai%: mai%
+test_%: %
 	adb push $< $(PUSHDIR)$<
 	adb shell 'mkdir -p /home/linaro/tmp && cd /home/linaro/tmp && $(PUSHDIR)$<'
 
@@ -72,7 +73,7 @@ LIBS := $(LIBS) /usr/lib/libcamparams.so.0 # missing symlink /usr/lib/libcampara
 test: all
 	$(foreach file,$(BIN),./$(file))
 
-test_mai%: mai%
+test_%: %
 	$<
 
 endif # cross-compiling? or native?
@@ -128,11 +129,11 @@ qcam: libqcamera2.a libqcamera2.so libcamera.a
 load_qcam: qcam
 	adb push libqcamera2.so /usr/lib/libqcamera2.so.0.0.0
 
+qc_test/mm_jpeg_test: qc_test/mm_jpeg_test.c
+	$(CXX) $(CXXFLAGS) $(EXTRA) $< -o $@ -Wl,--start-group $(LIBS) -Wl,--end-group
+
 %.o: %.cpp %.hpp $(DEPS)
 	$(CXX) -c -o $@ $< $(CXXFLAGS)
-
-libImageEncoder.a: ImageEncoder.o ImageEncoderConfig.o $(DEPS)
-	$(AR) $(AR_FLAGS) $@ $< ImageEncoderConfig.o
 
 libEncoder.a: Encoder.o EncoderConfig.o $(DEPS)
 	$(AR) $(AR_FLAGS) $@ $< EncoderConfig.o

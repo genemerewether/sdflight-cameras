@@ -1,11 +1,17 @@
 #include "ImageEncoder.hpp"
 #include "ImageEncoderConfig.hpp"
-#include <assert.h>
-#include <sys/time.h>
-#include <time.h>
 #include "Debug.hpp"
 
-#include <media/hardware/HardwareAPI.h>
+#include <assert.h>
+#include <string.h>
+#include <sys/time.h>
+#include <time.h>
+#include <stdlib.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+
+//#include <media/hardware/HardwareAPI.h>
 
 #include <qomx_core.h>
 
@@ -35,7 +41,10 @@ ImageEncoder::ImageEncoder() :
   m_omxEncoderState(OMX_StateInvalid),
   m_omxInputBuffers(NULL),
   m_omxOutputBuffers(NULL),
-  m_encoderConfig()
+  m_inputBuffers(NULL),
+  m_outputBuffers(NULL),
+  m_encoderConfig(),
+  m_frameReady(false)
 {
   OMX_ERRORTYPE omxError;
   struct timeval tv;
@@ -46,6 +55,10 @@ ImageEncoder::ImageEncoder() :
   assert(0 == pthread_mutex_init(&m_omxEncoderStateLock, 0));
 
   assert(0 == pthread_cond_init(&m_omxEncoderStateChange, 0));
+    
+  assert(0 == pthread_mutex_init(&m_encoderFrameLock, 0));
+    
+  assert(0 == pthread_cond_init(&m_encoderFrameReady, 0));
 
   omxError = OMX_Init_jpeg();
   assert(OMX_ErrorNone == omxError);
@@ -96,17 +109,33 @@ ImageEncoder::ImageEncoder() :
       config.outBufferCount, sizeof(OMX_BUFFERHEADERTYPE*));
   assert(m_omxOutputBuffers != NULL);
 
+  QOMX_BUFFER_INFO tmpBuffInfo;
+  memset(&tmpBuffInfo, 0, sizeof(QOMX_BUFFER_INFO));
+
+  m_inputBuffers = (uint8_t**) calloc(config.inBufferCount, sizeof(uint8_t*));
+  assert(m_inputBuffers != NULL);
   for (int i = 0; i < config.inBufferCount; i++) {
-    omxError = OMX_AllocateBuffer(m_omxEncoder,
-                                  &m_omxInputBuffers[i],
-                                  (OMX_U32) ImageEncoderConfig::IMG_COMP_PORT_INDEX_IN,
-                                  NULL,
-                                  config.inBufferSize);
-    DEBUG_PRINT(ENCODER_PCOLOR "\nAllocate OMX inBuffer %d of size %d returned %x\n" KNRM,
+    m_inputBuffers[i] = (uint8_t*) calloc(ImageEncoderConfig::IMG_COMP_IN_BUFFER_SIZE,
+                                          sizeof(uint8_t));
+    assert(m_inputBuffers[i] != NULL);
+    omxError = OMX_UseBuffer(m_omxEncoder,
+                             &m_omxInputBuffers[i],
+                             0,
+                             &tmpBuffInfo,
+                             ImageEncoderConfig::IMG_COMP_IN_BUFFER_SIZE,
+                             m_inputBuffers[i]);
+//     omxError = OMX_AllocateBuffer(m_omxEncoder,
+//                                   &m_omxInputBuffers[i],
+//                                   (OMX_U32) ImageEncoderConfig::IMG_COMP_PORT_INDEX_IN,
+//                                   NULL,
+//                                   config.inBufferSize);
+    DEBUG_PRINT(ENCODER_PCOLOR "\nUse OMX inBuffer %d of size %d returned %x\n" KNRM,
                 i, config.inBufferSize, omxError);
     assert(OMX_ErrorNone == omxError);
   }
 
+  m_outputBuffers = (uint8_t**) calloc(config.outBufferCount, sizeof(uint8_t*));
+  assert(m_outputBuffers != NULL);
   for (int i = 0; i < config.outBufferCount; i++) {
     omxError = OMX_AllocateBuffer(m_omxEncoder,
                                   &m_omxOutputBuffers[i],
@@ -222,6 +251,71 @@ ImageEncoder::~ImageEncoder()
   assert(0 == pthread_mutex_destroy(&m_omxEncoderStateLock));
 
   assert(0 == pthread_cond_destroy(&m_omxEncoderStateChange));
+}
+
+buffer_t* ImageEncoder::getPictureInBuffer(ImageEncoderInputType type) {
+  return NULL;
+}
+
+int ImageEncoder::startJob(ImageEncoderInputType type) {
+  return 0;
+}
+
+int ImageEncoder::writeBuffer(ImageEncoderInputType type,
+                              const char* const fileName)
+{
+    int fid = open(fileName,
+                   O_CREAT | O_WRONLY | O_TRUNC,
+                   S_IRUSR | S_IWUSR |  S_IRGRP | S_IWGRP);
+    if (fid == -1) {
+        DEBUG_PRINT(KRED "ImageEncoder failed to open %s\n" KNRM, fileName);
+        return errno;
+    }
+    
+    int stat = 0;/*write(fid,
+                     m_inputs[type].output.addr,
+                     m_inputs[type].output.size);*/
+    if (stat == -1) {
+        DEBUG_PRINT(KRED "ImageEncoder failed to write %s, fid %d, bytes %d\n" KNRM,
+                    fileName, fid, 0); //m_inputs[type].output.size);
+        (void) close(fid);
+        return errno;
+    }
+    DEBUG_PRINT(ENCODER_PCOLOR "ImageEncoder wrote %s, fid %d, bytes %d\n" KNRM,
+                fileName, fid, 0); // m_inputs[type].output.size);
+    
+    stat = close(fid);
+    if (stat == -1) {
+        DEBUG_PRINT(KRED "ImageEncoder failed to close %s, fid %d\n" KNRM,
+                    fileName, fid);
+        return errno;
+    }
+    
+    return 0;
+}
+
+int ImageEncoder::waitJob(unsigned int seconds)
+{
+    assert(0 == pthread_mutex_lock(&m_encoderFrameLock));
+    
+    struct timeval now;
+    gettimeofday(&now,NULL);
+    struct timespec wait;
+    wait.tv_sec = seconds + now.tv_sec;
+    wait.tv_nsec = now.tv_usec * 1000;
+    
+    int stat = 0;
+    while (!m_frameReady && stat == 0) {
+        stat = pthread_cond_timedwait(&m_encoderFrameReady, &m_encoderFrameLock,
+                                      &wait);
+    }
+    if (stat == ETIMEDOUT) {
+        DEBUG_PRINT(KRED "ImageEncoder timed out in waitJob\n" KNRM);
+    }
+    
+    assert(0 == pthread_mutex_unlock(&m_encoderFrameLock));
+    
+    return stat;
 }
 
 OMX_ERRORTYPE ImageEncoder::eventCallback(OMX_IN OMX_HANDLETYPE compHandle,

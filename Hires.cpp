@@ -6,6 +6,7 @@
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <string.h>
 #include <fcntl.h>
 #include <errno.h>
 
@@ -26,8 +27,8 @@ Hires::Hires(bool save) :
   m_frameStopRecording(-1),
   m_imageMode(HIRES_IMAGE_MODE_MAX),
   m_videoMode(HIRES_VIDEO_MODE_MAX),
-  m_encoder()
-  //,m_imageEncoder()
+  m_pictureOutBuffer(NULL)/*,
+  m_encoder()*/
 {
   struct timeval tv;
   gettimeofday(&tv,NULL);
@@ -113,6 +114,12 @@ void Hires::recordingAutoStop() {
   }
 }
 
+void Hires::setPictureOutBuffer(buffer_t* outBuffer) {
+  assert(0 == pthread_mutex_lock(&m_cameraFrameLock));
+  m_pictureOutBuffer = outBuffer;
+  assert(0 == pthread_mutex_unlock(&m_cameraFrameLock));
+}
+
 int Hires::takePicture(HiresImageMode mode) {
   int stat = -1;
   struct timeval tv;
@@ -129,7 +136,7 @@ int Hires::takePicture(HiresImageMode mode) {
 
   if ((mode == HIRES_IMG_13MP_HDR) ||
       (mode == HIRES_IMG_2MP_HDR) ||
-      (mode == HIRES_IMG_QVGA_HDR)) {
+      (mode == HIRES_IMG_VGA_HDR)) {
     m_params.set("scene-mode", "hdr");
     m_params.set("hdr-need-1x", "true");
     //m_params.set("zsl", "on");
@@ -156,12 +163,12 @@ int Hires::takePicture(HiresImageMode mode) {
     case HIRES_IMG_2MP_HDR:
       imageSize = camera::ImageSize(1920, 1080);
       break;
-    case HIRES_IMG_QVGA:
-    case HIRES_IMG_QVGA_HDR:
-      imageSize = camera::ImageSize(320, 240);
+    case HIRES_IMG_VGA:
+    case HIRES_IMG_VGA_HDR:
+      imageSize = camera::ImageSize(640, 480);
       break;
     default:
-      DEBUG_PRINT(KRED "\nHires takePicture called with invalid mode\n" KNRM);
+      DEBUG_PRINT(KRED "\nHires takePicture called with invalid mode %d\n" KNRM, mode);
       assert(0);
   }
 
@@ -254,7 +261,7 @@ int Hires::startRecording(HiresVideoMode mode,
       imageSize = camera::ImageSize(640, 480);
       break;
     default:
-      DEBUG_PRINT(KRED "\nHires startRecording called with invalid mode\n" KNRM);
+      DEBUG_PRINT(KRED "\nHires startRecording called with invalid mode %d\n" KNRM, mode);
       assert(0);
   }
 
@@ -294,8 +301,20 @@ int Hires::startRecording(HiresVideoMode mode,
     return stat;
   }
 
-  while (!m_videoReady) {
-    assert(0 == pthread_cond_wait(&m_cameraFrameReady, &m_cameraFrameLock));
+  struct timeval now;
+  gettimeofday(&now,NULL);
+  struct timespec wait;
+  wait.tv_sec = static_cast<unsigned int>(HIRES_IMG_WAIT_SEC) +
+    now.tv_sec;
+  wait.tv_nsec = now.tv_usec * 1000;
+
+  stat = 0;
+  while (!m_videoReady && stat == 0) {
+    stat = pthread_cond_timedwait(&m_cameraFrameReady, &m_cameraFrameLock,
+                                  &wait);
+  }
+  if (stat == ETIMEDOUT) {
+    DEBUG_PRINT(KRED "Hires timed out in startRecording\n" KNRM);
   }
 
   assert(0 == pthread_mutex_unlock(&m_cameraFrameLock));
@@ -383,7 +402,7 @@ void Hires::onVideoFrame(camera::ICameraFrame *frame) {
         fileName = "HIRES_VID_480P_HDR";
         break;
       default:
-        DEBUG_PRINT(KRED "\nHires invalid video mode in onVideoFrame\n" KNRM);
+        DEBUG_PRINT(KRED "\nHires invalid video mode %d in onVideoFrame\n" KNRM, m_videoMode);
         fileName = "HIRES_VID_UNKNOWN";
     }
     int fid = open(fileName,
@@ -429,14 +448,14 @@ void Hires::onPictureFrame(camera::ICameraFrame *frame) {
       case HIRES_IMG_2MP_HDR:
         fileName = "HIRES_IMG_2MP_HDR";
         break;
-      case HIRES_IMG_QVGA:
-        fileName = "HIRES_IMG_QVGA";
+      case HIRES_IMG_VGA:
+        fileName = "HIRES_IMG_VGA";
         break;
-      case HIRES_IMG_QVGA_HDR:
-        fileName = "HIRES_IMG_QVGA_HDR";
+      case HIRES_IMG_VGA_HDR:
+        fileName = "HIRES_IMG_VGA_HDR";
         break;
       default:
-        DEBUG_PRINT(KRED "\nHires invalid image mode in onPictureFrame\n" KNRM);
+        DEBUG_PRINT(KRED "\nHires invalid image mode %d in onPictureFrame\n" KNRM, m_imageMode);
         fileName = "HIRES_IMG_UNKNOWN";
     }
     int fid = open(fileName,
@@ -449,7 +468,25 @@ void Hires::onPictureFrame(camera::ICameraFrame *frame) {
     assert(close(fid) != -1);
   }
 
+  // TODO(merewet) - use a second lock?
   assert(0 == pthread_mutex_lock(&m_cameraFrameLock));
+
+  if (m_pictureOutBuffer == NULL) {
+    DEBUG_PRINT(HIRES_PCOLOR "\nHires picture out buffer NULL in onPictureFrame\n" KNRM);
+  }
+  else {
+    if (m_pictureOutBuffer->addr == NULL) {
+      DEBUG_PRINT(KRED "\nHires picture out buffer addr NULL in onPictureFrame\n" KNRM);
+      assert(0);
+    }
+    int size = frame->size;
+    if (m_pictureOutBuffer->size < size) {
+      DEBUG_PRINT(KRED "\nHires picture out buffer too small, %d vs %d, in onPictureFrame\n" KNRM,
+                  m_pictureOutBuffer->size, size);
+      size = m_pictureOutBuffer->size;
+    }
+    (void) memcpy((void*) m_pictureOutBuffer->addr, frame->data, size);
+  }
 
   m_pictureReady = true;
 
