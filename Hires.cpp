@@ -147,6 +147,10 @@ int Hires::takePicture(HiresImageMode mode) {
     m_params.set("preview-format", "bayer-rggb");
     m_params.set("picture-format", "bayer-mipi-10bggr");
   }
+  else if (mode == HIRES_IMG_JPG_TEST) {
+    m_params.set("picture-format", "jpeg");
+    m_params.set("preview-format", "yuv420sp");
+  }
   else {
     m_params.set("preview-format", "yuv420sp");
     m_params.set("picture-format", "yuv420sp");
@@ -165,6 +169,7 @@ int Hires::takePicture(HiresImageMode mode) {
       break;
     case HIRES_IMG_VGA:
     case HIRES_IMG_VGA_HDR:
+    case HIRES_IMG_JPG_TEST:
       imageSize = camera::ImageSize(640, 480);
       break;
     default:
@@ -453,6 +458,9 @@ void Hires::onPictureFrame(camera::ICameraFrame *frame) {
         break;
       case HIRES_IMG_VGA_HDR:
         fileName = "HIRES_IMG_VGA_HDR";
+        break;
+      case HIRES_IMG_JPG_TEST:
+        fileName = "HIRES_IMG_JPG_TEST";
         break;
       default:
         DEBUG_PRINT(KRED "\nHires invalid image mode %d in onPictureFrame\n" KNRM, m_imageMode);

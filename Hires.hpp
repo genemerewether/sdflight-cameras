@@ -30,6 +30,7 @@ public:
     HIRES_IMG_2MP_HDR,
     HIRES_IMG_VGA,
     HIRES_IMG_VGA_HDR,
+    HIRES_IMG_JPG_TEST,
     HIRES_IMAGE_MODE_MAX
   } HiresImageMode;
 

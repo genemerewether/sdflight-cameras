@@ -51,10 +51,12 @@ ImageEncoder::ImageEncoder() :
     // NOTE(mereweth) - can use ION buffers for input
     m_inputs[i].input.size = m_inputs[i].dim.w * m_inputs[i].dim.h * 3 / 2;
     m_inputs[i].input.addr = (uint8_t *)malloc(m_inputs[i].input.size);
+    //m_inputs[i].input.addr = (uint8_t*) buffer_allocate(&(m_inputs[i].input), 0); // not cached
     assert(m_inputs[i].input.addr);
 
     m_inputs[i].output.size = m_inputs[i].dim.w * m_inputs[i].dim.h * 3 / 2;
     m_inputs[i].output.addr = (uint8_t *)malloc(m_inputs[i].output.size);
+    //m_inputs[i].output.addr = (uint8_t*) buffer_allocate(&(m_inputs[i].output), 0); // not cached
     assert(m_inputs[i].output.addr);
 
     /* set encode parameters */
@@ -81,7 +83,7 @@ ImageEncoder::ImageEncoder() :
     m_inputs[i].params.src_main_buf[0].offset.mp[1].len = size >> 1;
     m_inputs[i].params.num_src_bufs = 1;
 
-    m_inputs[i].params.encode_thumbnail = 1;
+    m_inputs[i].params.encode_thumbnail = 0;
     m_inputs[i].params.quality = 80;
 
     m_inputs[i].job.encode_job.dst_index = 0;
@@ -136,10 +138,12 @@ ImageEncoder::~ImageEncoder()
 
   for (int i = 0; i < IMGENC_IMAGE_MODE_MAX; i++) {
     assert(m_inputs[i].input.addr);
+    //assert(0 == buffer_deallocate(&(m_inputs[i].input)));
     free(m_inputs[i].input.addr);
     m_inputs[i].input.addr = NULL;
 
     assert(m_inputs[i].output.addr);
+    //assert(0 == buffer_deallocate(&(m_inputs[i].output)));
     free(m_inputs[i].output.addr);
     m_inputs[i].output.addr = NULL;
 
