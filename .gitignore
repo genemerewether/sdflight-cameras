@@ -1,5 +1,7 @@
 *.o
+*.so
 *.a
 main*
 !main*.cpp
+mm_jpeg_test
 *~

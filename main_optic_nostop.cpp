@@ -9,17 +9,17 @@
 
 #define MAIN_PCOLOR KGRN
 
-Optic optic;
+Optic optic(true);
 
 int main(int argc, char *argv[]) {
   struct timeval tv;
   gettimeofday(&tv,NULL);
-  DEBUG_PRINT(MAIN_PCOLOR "\nmain_optic; activating optic camera at %f\n" KNRM,
+  DEBUG_PRINT(MAIN_PCOLOR "\nmain_optic_nostop; activating optic camera at %f\n" KNRM,
               tv.tv_sec + tv.tv_usec / 1000000.0);
   assert(0 == optic.activate());
-  sleep(1);
-
-  optic.deactivate();
+  while (1) {
+    sleep(1);
+  }
 
   return 0;
 }

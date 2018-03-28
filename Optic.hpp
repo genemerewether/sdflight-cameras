@@ -7,6 +7,9 @@
 
 #include "Debug.hpp"
 
+#ifndef SDFLIGHT_CAMERAS_OPTIC_HPP
+#define SDFLIGHT_CAMERAS_OPTIC_HPP
+
 class Optic : private camera::ICameraListener
 {
 public:
@@ -41,3 +44,5 @@ private:
 
   pthread_mutex_t m_cameraFrameLock;
 }; // class Optic
+
+#endif // SDFLIGHT_CAMERAS_OPTIC_HPP
