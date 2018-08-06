@@ -1,13 +1,13 @@
 SRC = Hires Optic Encoder ImageEncoder
 
-BIN = main_loop main_hires main_optic main_optic_nostop main_simul_gbl
+BIN = main_loop main_hires main_optic main_optic_nostop
 
 DEPS = Debug.hpp EncoderConfig.hpp
 HDR = $(foreach name,$(SRC),$(name).hpp) $(DEPS)
 OBJ = $(foreach name,$(sort $(SRC) $(BIN)),$(name).o)
 SLIB = $(foreach name,$(SRC),lib$(name).a)
 
-PUSHDIR = /home/linaro/camtest/
+PUSHDIR = /eng/camtest/
 
 CXXFLAGS = -I. -g \
 	-Wall -Wextra \
@@ -17,10 +17,11 @@ CXXFLAGS = -I. -g \
 	-Wno-long-long \
 	-fcheck-new \
 	-Wnon-virtual-dtor \
+	-fno-omit-frame-pointer -mapcs-frame -funwind-tables \
 	-std=c++03 # \
 	#-std=gnu++0x
 
-LIBS = -lpthread -ldl -lOmxVenc -lOmxCore -lglib-2.0 -lcutils -llog -lqomx_core -lmmjpeg_interface # -lqcamera2 -lhardware -lqcam -lmmcamera_interface # not needed -lm -lrt -lutil
+LIBS = -lcamera -lpthread -ldl -lOmxVenc -lOmxCore -lglib-2.0 -lcutils -llog -lqomx_core -lmmjpeg_interface # -lqcamera2 -lhardware -lqcam -lmmcamera_interface # not needed -lm -lrt -lutil
 
 all: $(BIN)
 
@@ -82,7 +83,7 @@ AR_FLAGS=rcs
 
 EXTRA=
 
-mai%: mai%.cpp $(SLIB) libcamera.a
+mai%: mai%.cpp $(SLIB) #libcamera.a
 	$(CXX) $(CXXFLAGS) $(EXTRA) $< -o $@ -Wl,--start-group $(filter-out $<,$^) $(LIBS) -Wl,--end-group
 
 LIBCAMERA_NAME = camera_memory camera_parameters qcamera2
@@ -96,8 +97,8 @@ camera_parameters.o: camera_parameters.cpp
 	$(CXX) $(CXXFLAGS) $(LIBCAMERA_CXXFLAGS) -c -o $@ $<
 qcamera2.o: qcamera2.cpp
 	$(CXX) $(CXXFLAGS) $(LIBCAMERA_CXXFLAGS) -c -o $@ $<
-libcamera.a: $(LIBCAMERA_OBJ) $(LIBCAMERA_HDR)
-	$(AR) $(AR_FLAGS) $@ $(LIBCAMERA_OBJ)
+#libcamera.a: $(LIBCAMERA_OBJ) $(LIBCAMERA_HDR)
+#	$(AR) $(AR_FLAGS) $@ $(LIBCAMERA_OBJ)
 
 LIBQCAMERA_HDR = 
 LIBQCAMERA_NAME = QCamera2Factory QCamera2Hal QCamera2HWI QCameraMem \

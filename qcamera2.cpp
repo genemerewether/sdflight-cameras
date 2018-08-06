@@ -60,8 +60,8 @@ enum stream_type{
     STREAM_NUM
 };
 static pthread_mutex_t streamMutex[STREAM_NUM];
-//bool QCamera2::isVideoRunning_ = false;
-//bool QCamera2::isPreviewRunning_ = false;
+bool QCamera2::isVideoRunning_ = false;
+bool QCamera2::isPreviewRunning_ = false;
 
 static vector<int> g_openCameras;
 
@@ -84,7 +84,7 @@ static camera_module_t* getCameraHalModule()
                 dlclose(handle);
             }
         } else {
-	    CAM_ERR("dlopen failed for %s, %s", CAMERA_HAL_LIB_NAME, dlerror());
+            CAM_ERR("dlopen failed for %s, %s", CAMERA_HAL_LIB_NAME, dlerror());
         }
     }
     pthread_mutex_unlock(&halMutex);
@@ -284,9 +284,7 @@ void QCamera2Frame::dispatchFrame(ICameraListener* listener,
 QCamera2::QCamera2() :
     dev_(NULL),
     id_(-1),
-    isPreviewRequested_(false),
-    isPreviewRunning_(false),
-    isVideoRunning_(false)
+    isPreviewRequested_(false)
 {
     int i;
     for (i = 0; i < STREAM_NUM; i++)
@@ -387,9 +385,9 @@ void QCamera2::data_callback(int32_t msg_type,
         return;
     }
     if (((CAMERA_MSG_PREVIEW_FRAME == msg_type) ||
-        (CAMERA_MSG_PREVIEW_METADATA == msg_type)) && (!me->isPreviewRunning_))
+        (CAMERA_MSG_PREVIEW_METADATA == msg_type)) && (!isPreviewRunning_))
         goto exit;
-    if ((CAMERA_MSG_VIDEO_FRAME == msg_type) && (!me->isVideoRunning_))
+    if ((CAMERA_MSG_VIDEO_FRAME == msg_type) && (!isVideoRunning_))
         goto exit;
     /* notify each listener */
     for (int i=0; i < me->listeners_.size(); i++) {
@@ -412,9 +410,9 @@ void QCamera2::data_timestamp_callback(int64_t timestamp, int32_t msg_type,
     }
 
     if (((CAMERA_MSG_PREVIEW_FRAME == msg_type) ||
-        (CAMERA_MSG_PREVIEW_METADATA == msg_type)) && (!me->isPreviewRunning_))
+        (CAMERA_MSG_PREVIEW_METADATA == msg_type)) && (!isPreviewRunning_))
         goto exit;
-    if ((CAMERA_MSG_VIDEO_FRAME == msg_type) && (!me->isVideoRunning_))
+    if ((CAMERA_MSG_VIDEO_FRAME == msg_type) && (!isVideoRunning_))
         goto exit;
     /* notify each listener */
     for (int i=0; i < me->listeners_.size(); i++) {
@@ -489,8 +487,6 @@ int QCamera2::takePicture()
 {
     int rc = 0;
     dev_->ops->enable_msg_type(dev_, CAMERA_MSG_COMPRESSED_IMAGE);
-    //dev_->ops->enable_msg_type(dev_, CAMERA_MSG_RAW_IMAGE);
-    //dev_->ops->enable_msg_type(dev_, CAMERA_MSG_RAW_IMAGE_NOTIFY);
     rc = dev_->ops->take_picture(dev_);
     return rc;
 }

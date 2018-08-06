@@ -13,7 +13,7 @@
 class Optic : private camera::ICameraListener
 {
 public:
-  Optic(bool print = true);
+  Optic(bool postProc = false, bool print = true);
 
   ~Optic();
 

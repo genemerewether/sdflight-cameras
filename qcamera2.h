@@ -76,8 +76,8 @@ class QCamera2 : public ICameraDevice
     std::vector<ICameraListener *> listeners_;
 
     bool isPreviewRequested_;
-    bool isPreviewRunning_;
-    bool isVideoRunning_;
+    static bool isPreviewRunning_;
+    static bool isVideoRunning_;
 
     static int msg_to_stream(int32_t msg_type);
 
