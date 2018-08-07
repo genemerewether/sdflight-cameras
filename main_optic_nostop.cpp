@@ -9,7 +9,9 @@
 
 #define MAIN_PCOLOR KGRN
 
-Optic optic(true);
+Optic optic(true); // use 8-bit callback
+//Optic optic(false); // use 10-bit callback
+
 
 int main(int argc, char *argv[]) {
   struct timeval tv;

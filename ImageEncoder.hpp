@@ -1,5 +1,3 @@
-#include "ImageEncoderConfig.hpp"
-
 #include <pthread.h>
 
 #ifdef __cplusplus

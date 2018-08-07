@@ -8,7 +8,7 @@
 
 #define OPTIC_CAM_TYPE 1
 
-Optic::Optic(bool print) :
+Optic::Optic(bool postProc, bool print) :
   m_print(print),
   m_cameraPtr(NULL),
   m_params()
@@ -41,6 +41,22 @@ Optic::Optic(bool print) :
   stat = camera::ICameraDevice::createInstance(cameraID, &m_cameraPtr);
   assert(stat == 0);
 
+  stat = m_params.init(m_cameraPtr);
+  assert(stat == 0);
+
+  if (postProc) {
+    printf(OPTIC_PCOLOR "\nUsing 8-bit callback in Optic\n" KNRM);
+  }
+  else {
+    printf(OPTIC_PCOLOR "\nUsing 10-bit callback in Optic\n" KNRM);
+    m_params.set("preview-format", "bayer-rggb");
+    // even though we do not use takePicture callback, NEED to set this
+    m_params.set("picture-format", "bayer-mipi-10gbrg");
+    m_params.set("raw-size", "640x480");
+    stat = m_params.commit();
+    assert(stat == 0);
+  }
+
   assert(0 == pthread_mutex_init(&m_cameraFrameLock, 0));
 }
 
@@ -67,14 +83,35 @@ void Optic::onError() {
 }
 
 void Optic::onControl(const camera::ControlEvent& control) {
+  struct timeval tv;
+  gettimeofday(&tv,NULL);
+  DEBUG_PRINT(OPTIC_PCOLOR "\nOptic Control callback type %d at time %f\n" KNRM,
+              control.type,
+              tv.tv_sec + tv.tv_usec / 1000000.0);
 }
 
 void Optic::onPreviewFrame(camera::ICameraFrame *frame) {
   if (m_print) {
+    static struct timeval tv_last;
+    static bool first = true;
     struct timeval tv;
     gettimeofday(&tv,NULL);
-    DEBUG_PRINT(OPTIC_PCOLOR "\nOptic Preview callback at time %f; size %u\n" KNRM,
-                tv.tv_sec + tv.tv_usec / 1000000.0, frame->size);
+    /*DEBUG_PRINT(OPTIC_PCOLOR "\nOptic Preview callback at time %f; size %u\n" KNRM,
+      tv.tv_sec + tv.tv_usec / 1000000.0, frame->size);*/
+    if (first) {
+      first = false;
+    }
+    else {
+      double elapsed = tv.tv_sec - tv_last.tv_sec
+	+ tv.tv_usec / 1000000.0 - tv_last.tv_usec / 1000000.0;
+      /*DEBUG_PRINT(OPTIC_PCOLOR "\nOptic preview callback elapsed time %f\n" KNRM,
+	elapsed);*/
+      if ((elapsed < 0.020) || (elapsed > 0.040)) {
+        DEBUG_PRINT(OPTIC_PCOLOR "\nOptic preview callback elapsed time %f\n" KNRM,
+		    elapsed);
+      }
+    }
+    tv_last = tv;
   }
 }
 

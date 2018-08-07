@@ -46,7 +46,7 @@ public:
     HIRES_VIDEO_MODE_MAX
   } HiresVideoMode;
 
-  Hires(bool save = false);
+  Hires(bool alwaysCycle = false, bool save = false);
 
   ~Hires();
 
@@ -88,7 +88,13 @@ private:
   camera::CameraParams m_params;
 
   bool m_pictureReady;
-  
+
+  bool m_alwaysCycle;
+
+  bool m_doAutofocus;
+
+  bool m_autofocusDone;
+
   bool m_videoReady;
 
   bool m_recording;
@@ -111,6 +117,10 @@ private:
   pthread_mutex_t m_cameraFrameLock;
 
   pthread_cond_t m_cameraFrameReady;
+
+  pthread_mutex_t m_autofocusLock;
+
+  pthread_cond_t m_autofocusReady;
 
 }; // class Hires
 
