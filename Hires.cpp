@@ -65,7 +65,6 @@ Hires::Hires(bool alwaysCycle, bool save) :
   stat = m_params.init(m_cameraPtr);
   assert(stat == 0);
 
-  m_params.set("recording-hint", "true");
   m_params.set("dis", "eis_2_0");
   m_params.setFocusMode("continuous-video");
 
@@ -182,11 +181,9 @@ int Hires::takePicture(HiresImageMode mode) {
   camera::ImageSize imageSize;
   switch (mode) {
     case HIRES_IMG_13MP_RAW:
-      imageSize = camera::ImageSize(4208, 3120);
-      break;
     case HIRES_IMG_13MP:
     case HIRES_IMG_13MP_HDR:
-      imageSize = camera::ImageSize(3840, 2160);
+      imageSize = camera::ImageSize(4208, 3120);
       break;
     case HIRES_IMG_2MP:
     case HIRES_IMG_2MP_HDR:
@@ -281,8 +278,6 @@ int Hires::takePicture(HiresImageMode mode) {
   }
   if (stat == ETIMEDOUT) {
     DEBUG_PRINT(KRED "Hires timed out in takePicture\n" KNRM);
-    this->deactivate();
-    this->activate();
   }
 
   assert(0 == pthread_mutex_unlock(&m_cameraFrameLock));

@@ -11,14 +11,10 @@
 
 #define MAIN_PCOLOR KGRN
 
-Hires hires(true, false); // always cycle; don't save pictures / video
+Hires hires(false, false); // always cycle; don't save pictures / video
 //ImageEncoder imageEnc;
 
 int main(int argc, char *argv[]) {
-  assert(0 == hires.takePicture(Hires::HIRES_IMG_JPG_TEST));
-
-  return 0;
-
   assert(0 == hires.startRecording(Hires::HIRES_VID_4K, 10));
   hires.recordingAutoStop(); // 1-second loop like RTI, checking for enough frames acquired
 
@@ -69,7 +65,7 @@ int main(int argc, char *argv[]) {
   assert(0 == imageEnc.writeBuffer(ImageEncoder::IMGENC_IMG_13MP,
   "MAIN_HIRES_IMGENC_HIRES_IMG_13MP"));*/
 
-  //assert(0 == hires.takePicture(Hires::HIRES_IMG_13MP_HDR));
+  assert(0 == hires.takePicture(Hires::HIRES_IMG_13MP_HDR));
   /*assert(0 == imageEnc.startJob(ImageEncoder::IMGENC_IMG_13MP));
   assert(0 == imageEnc.waitJob(2));
   assert(0 == imageEnc.writeBuffer(ImageEncoder::IMGENC_IMG_13MP,
